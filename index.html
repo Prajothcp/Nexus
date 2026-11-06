@@ -1,0 +1,3841 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AETHER NEXUS — Interactive 3D Physics, Generative Flow, Synth & Cellular Lab</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent-primary: #38bdf8;
+      --accent-secondary: #a855f7;
+      --accent-glow: rgba(56, 189, 248, 0.35);
+      --bg-body: #030712;
+      --text-main: #f8fafc;
+      --bg-panel: rgba(15, 23, 42, 0.42);
+      --bg-subpanel: rgba(15, 23, 42, 0.55);
+      --border-glass: rgba(255, 255, 255, 0.18);
+      --specular-top: rgba(255, 255, 255, 0.32);
+      --shadow-glass: rgba(0, 0, 0, 0.55);
+    }
+    html[data-color-mode="light"] {
+      --bg-body: #eef2ff;
+      --text-main: #0f172a;
+      --bg-panel: rgba(255, 255, 255, 0.48);
+      --bg-subpanel: rgba(255, 255, 255, 0.68);
+      --border-glass: rgba(255, 255, 255, 0.75);
+      --specular-top: rgba(255, 255, 255, 0.95);
+      --shadow-glass: rgba(15, 23, 42, 0.12);
+    }
+    [data-theme="emerald"] {
+      --accent-primary: #10b981;
+      --accent-secondary: #06b6d4;
+      --accent-glow: rgba(16, 185, 129, 0.35);
+    }
+    [data-theme="solar"] {
+      --accent-primary: #f59e0b;
+      --accent-secondary: #ec4899;
+      --accent-glow: rgba(245, 158, 11, 0.35);
+    }
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-body);
+      color: var(--text-main);
+      overflow-x: hidden;
+      margin: 0;
+      transition: background-color 0.35s ease, color 0.35s ease;
+    }
+    .font-mono-tech {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* iOS / VisionOS Frosted Liquid Glass Effect */
+    .glass-panel {
+      background: linear-gradient(135deg, var(--bg-panel) 0%, rgba(255, 255, 255, 0.05) 100%);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      border: 1px solid var(--border-glass);
+      border-top: 1px solid var(--specular-top);
+      border-left: 1px solid var(--specular-top);
+      box-shadow:
+        0 16px 40px -12px var(--shadow-glass),
+        inset 0 1px 1px 0 var(--specular-top),
+        0 0 24px -6px var(--accent-glow);
+      transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    /* Light Mode Adaptive Overrides for Tailwind Utility Classes */
+    html[data-color-mode="light"] body {
+      background-color: #eef2ff !important;
+      color: #0f172a !important;
+    }
+    html[data-color-mode="light"] .bg-slate-900,
+    html[data-color-mode="light"] .bg-slate-900\/90,
+    html[data-color-mode="light"] .bg-slate-900\/80,
+    html[data-color-mode="light"] .bg-slate-900\/60,
+    html[data-color-mode="light"] .bg-slate-950\/80,
+    html[data-color-mode="light"] .bg-slate-950\/85,
+    html[data-color-mode="light"] .bg-slate-950\/90,
+    html[data-color-mode="light"] .bg-slate-800 {
+      background-color: var(--bg-subpanel) !important;
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-color: rgba(148, 163, 184, 0.35) !important;
+      color: #0f172a !important;
+    }
+    html[data-color-mode="light"] .text-slate-100,
+    html[data-color-mode="light"] .text-slate-200,
+    html[data-color-mode="light"] .text-slate-300 {
+      color: #1e293b !important;
+    }
+    html[data-color-mode="light"] .text-slate-400,
+    html[data-color-mode="light"] .text-slate-500 {
+      color: #475569 !important;
+    }
+    html[data-color-mode="light"] .text-sky-300,
+    html[data-color-mode="light"] .text-sky-200 {
+      color: #0284c7 !important;
+    }
+    html[data-color-mode="light"] .text-purple-300,
+    html[data-color-mode="light"] .text-purple-200 {
+      color: #7e22ce !important;
+    }
+    html[data-color-mode="light"] .text-emerald-300 {
+      color: #047857 !important;
+    }
+    html[data-color-mode="light"] .text-amber-300,
+    html[data-color-mode="light"] .text-amber-200 {
+      color: #b45309 !important;
+    }
+    #bg-touch-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(14px) saturate(165%);
+      opacity: 0.92;
+      will-change: transform;
+      transform: translateZ(0);
+      transition: filter 0.3s ease, opacity 0.3s ease;
+    }
+    #cosmos-viewport,
+    #flow-canvas,
+    #life-canvas,
+    #arcade-canvas,
+    #mandala-canvas,
+    #defender-canvas,
+    #cyberpong-canvas {
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body.touch-drag-lock {
+      touch-action: pan-y;
+      overscroll-behavior-x: none;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hud-header-bar {
+      position: relative !important;
+      top: auto !important;
+      left: auto !important;
+      right: auto !important;
+      background: rgba(2, 6, 23, 0.85);
+      border-bottom: 1px solid rgba(51, 65, 85, 0.65);
+      padding: 0.65rem 0.85rem;
+      pointer-events: auto !important;
+    }
+    html[data-color-mode="light"] .hud-header-bar {
+      background: rgba(255, 255, 255, 0.78);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+    }
+    .neon-border {
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+    .tab-active {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      color: #020617;
+      font-weight: 700;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: rgba(51, 65, 85, 0.8);
+      border-radius: 999px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-primary);
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--accent-primary);
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+    .seq-cell {
+      transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .seq-cell.active {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      box-shadow: 0 0 12px var(--accent-glow);
+      transform: scale(0.96);
+    }
+    .seq-cell.playing-col {
+      outline: 2px solid rgba(255, 255, 255, 0.75);
+      outline-offset: -2px;
+    }
+    .piano-key {
+      transition: transform 0.08s ease, background-color 0.1s ease;
+    }
+    .piano-key:active, .piano-key.key-active {
+      transform: translateY(2px);
+      background: linear-gradient(to bottom, var(--accent-primary), var(--accent-secondary));
+      color: #020617;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.65; }
+      50% { opacity: 1; }
+    }
+    .status-dot {
+      animation: pulseGlow 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-gray-950 text-slate-100 selection:bg-sky-500 selection:text-slate-950 relative">
+  <!-- INTERACTIVE TOUCH-SPOTLIGHT & BLURRED LIQUID GRASS/AURORA BACKGROUND -->
+  <canvas id="bg-touch-canvas" aria-hidden="true"></canvas>
+
+  <!-- TOP NAVIGATION & TELEMETRY HEADER -->
+  <header class="sticky top-0 z-40 glass-panel border-b border-slate-800/80 px-3 sm:px-6 py-2.5">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <!-- Brand Title -->
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-400 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+          <svg class="w-5 h-5 text-slate-950" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold tracking-tight text-base sm:text-lg bg-clip-text text-transparent bg-gradient-to-r from-sky-300 via-indigo-200 to-purple-300">AETHER NEXUS</span>
+            <span class="text-[10px] font-mono-tech uppercase px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 border border-sky-500/30">v4.2 Quantum Core</span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Real-Time 3D Orbital Physics • Particle Flow Studio • Polyphonic Web Synth • Cellular Lab</p>
+        </div>
+      </div>
+
+      <!-- Global Controls: Mic Sound Mode [S], Touch Aura, Theme, Audio, Guide -->
+      <div class="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
+        <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-xs font-mono-tech">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 status-dot"></span>
+          <span id="fps-counter" class="text-emerald-300">60 FPS</span>
+        </div>
+
+        <button id="btn-mic-mode" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-400/50 text-xs font-semibold text-emerald-300 transition flex items-center gap-1.5 shadow-sm" title="Cycle or Turn Off Microphone Sound-Reactive Background (Shortcut: Press S key)">
+          <span id="mic-mode-icon">🎙️</span>
+          <span id="mic-mode-label">Mic: Off</span>
+          <span class="px-1 py-0.5 rounded bg-emerald-500/20 text-[10px] font-mono-tech text-emerald-200 border border-emerald-400/30">S</span>
+          <span class="w-8 h-1.5 rounded-full bg-slate-800 overflow-hidden inline-flex items-center">
+            <span id="mic-level-bar" class="h-full bg-gradient-to-r from-emerald-400 via-sky-400 to-purple-400 transition-all duration-75" style="width: 0%"></span>
+          </span>
+        </button>
+
+        <button id="btn-bg-mode" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-purple-400/40 text-xs font-medium text-purple-200 transition flex items-center gap-1.5" title="Toggle Touch-Only vs Ambient Blurred Background">
+          <span>👆</span> <span id="bg-mode-label" class="hidden md:inline">Touch Aura Only</span>
+        </button>
+
+        <button id="btn-color-mode" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-sky-400/40 text-xs font-semibold text-sky-200 transition flex items-center gap-1.5" title="Switch Dark and Light iOS Glass Mode">
+          <span id="color-mode-icon">🌙</span> <span id="color-mode-label" class="hidden md:inline">Dark Glass</span>
+        </button>
+
+        <button id="btn-theme-cycle" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-medium text-slate-200 transition flex items-center gap-1.5" title="Cycle Color Theme">
+          <span>🎨</span> <span id="theme-label" class="hidden lg:inline">Cyber Blue</span>
+        </button>
+
+        <button id="btn-sfx-toggle" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-medium text-sky-300 transition flex items-center gap-1" title="Toggle UI Sound Effects">
+          <span id="sfx-icon">🔊</span> <span id="sfx-label" class="hidden lg:inline">SFX On</span>
+        </button>
+
+        <button id="btn-guide-open" type="button" class="px-2.5 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-xs font-semibold text-sky-200 transition flex items-center gap-1">
+          <span>📘</span> <span class="hidden sm:inline">How It Works</span>
+        </button>
+      </div>
+
+      <!-- Mode Switcher Tabs (Full-Width Responsive Dock for Mobile & Desktop Alignment) -->
+      <nav class="w-full flex items-center gap-1.5 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800 overflow-x-auto no-scrollbar" aria-label="Simulation Modules">
+        <button id="tab-cosmos" type="button" class="tab-btn tab-active px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0">
+          <span>🪐</span> <span>3D Orbital Lab</span>
+        </button>
+        <button id="tab-flow" type="button" class="tab-btn px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0">
+          <span>✨</span> <span>Nebula Flow Field</span>
+        </button>
+        <button id="tab-synth" type="button" class="tab-btn px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0">
+          <span>🎹</span> <span>Cyber Synth Matrix</span>
+        </button>
+        <button id="tab-life" type="button" class="tab-btn px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0">
+          <span>🧬</span> <span>Cellular Automaton</span>
+        </button>
+        <button id="tab-arcade" type="button" class="tab-btn px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0">
+          <span>🕹️</span> <span>Prism Breaker Arcade</span>
+        </button>
+        <button id="tab-defender" type="button" class="tab-btn px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0">
+          <span>🚀</span> <span>Astro-Shield 360°</span>
+        </button>
+        <button id="tab-cyberpong" type="button" class="tab-btn px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0">
+          <span>⚡</span> <span>Cyber-Pulse Duel</span>
+        </button>
+        <button id="tab-mandala" type="button" class="tab-btn px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0">
+          <span>🎆</span> <span>Kaleidoscope & Fireworks</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="relative z-10 flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 flex flex-col gap-4">
+
+    <!-- ==========================================
+         MODULE 1: 3D ORBITAL & GRAVITY SANDBOX
+         ========================================== -->
+    <section id="panel-cosmos" class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+      <!-- 3D Viewport Area -->
+      <div class="lg:col-span-8 xl:col-span-9 relative rounded-2xl overflow-hidden glass-panel min-h-[420px] sm:min-h-[540px] flex flex-col">
+        <!-- Top Overlay HUD -->
+        <div class="hud-header-bar z-10 flex flex-wrap items-center justify-between gap-2">
+          <div class="bg-slate-950/80 backdrop-blur-md border border-slate-800/90 px-3 py-2 rounded-xl pointer-events-auto">
+            <div class="text-xs font-semibold text-sky-300 flex items-center gap-2">
+              <span>N-BODY GRAVITATIONAL ENGINE</span>
+              <span id="cosmos-body-count" class="px-1.5 py-0.5 rounded bg-sky-500/20 text-[11px] font-mono-tech">8 Bodies</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5">Click anywhere in 3D space to launch a new exoplanet into orbit • Drag buttons below to steer camera</p>
+          </div>
+
+          <div class="flex items-center gap-2 pointer-events-auto">
+            <button id="btn-cam-orbit" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-sky-500/40 text-xs font-medium text-sky-200 transition">Orbit Cam</button>
+            <button id="btn-cam-top" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-xs font-medium text-slate-300 transition">Top Ecliptic</button>
+            <button id="btn-cam-close" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-xs font-medium text-slate-300 transition">Core Close-Up</button>
+          </div>
+        </div>
+
+        <!-- Three.js Canvas Mount -->
+        <div id="cosmos-viewport" class="w-full flex-1 cursor-crosshair relative"></div>
+
+        <!-- Bottom Telemetry Bar -->
+        <div class="bg-slate-950/90 border-t border-slate-800/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono-tech">
+          <div class="flex items-center gap-4">
+            <div><span class="text-slate-500">SYSTEM ENERGY:</span> <span id="telemetry-energy" class="text-sky-300">1,420.8 GJ</span></div>
+            <div><span class="text-slate-500">STAR MASS:</span> <span id="telemetry-star-mass" class="text-amber-300">1.00 M☉</span></div>
+            <div class="hidden sm:block"><span class="text-slate-500">COLLISIONS:</span> <span id="telemetry-collisions" class="text-purple-300">0</span></div>
+          </div>
+          <div id="cosmos-last-event" class="text-emerald-400 text-[11px]">Ready: Click viewport or "Spawn Exoplanet" to inject mass</div>
+        </div>
+      </div>
+
+      <!-- Right Control Deck -->
+      <aside class="lg:col-span-4 xl:col-span-3 glass-panel rounded-2xl p-4 flex flex-col justify-between gap-4">
+        <div class="space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-sky-400">Orbital Control Deck</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Manipulate spacetime curvature and launch custom bodies.</p>
+          </div>
+
+          <!-- Time Warp & Gravity Sliders -->
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-time-scale" class="text-slate-300 font-medium">Time Dilation (Speed)</label>
+                <span id="val-time-scale" class="font-mono-tech text-sky-300">1.0x</span>
+              </div>
+              <input id="slider-time-scale" type="range" min="0" max="3" step="0.1" value="1.0" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-star-mass" class="text-slate-300 font-medium">Central Star Gravity</label>
+                <span id="val-star-mass" class="font-mono-tech text-amber-300">1.00 M☉</span>
+              </div>
+              <input id="slider-star-mass" type="range" min="0.2" max="3.0" step="0.1" value="1.0" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-cam-zoom" class="text-slate-300 font-medium">Camera Distance</label>
+                <span id="val-cam-zoom" class="font-mono-tech text-purple-300">95 AU</span>
+              </div>
+              <input id="slider-cam-zoom" type="range" min="35" max="170" step="1" value="95" class="w-full" />
+            </div>
+          </div>
+
+          <!-- Exoplanet Launcher Config -->
+          <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-3">
+            <div class="text-xs font-semibold text-slate-200 flex items-center justify-between">
+              <span>🚀 Exoplanet Launcher</span>
+              <span class="text-[11px] text-sky-400 font-mono-tech">Click 3D Space</span>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-planet-size" class="text-slate-400">Planet Radius</label>
+                <span id="val-planet-size" class="font-mono-tech text-slate-200">1.8 R⊕</span>
+              </div>
+              <input id="slider-planet-size" type="range" min="0.8" max="4.0" step="0.2" value="1.8" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-launch-vel" class="text-slate-400">Tangential Velocity</label>
+                <span id="val-launch-vel" class="font-mono-tech text-slate-200">1.00 v₀</span>
+              </div>
+              <input id="slider-launch-vel" type="range" min="0.3" max="1.8" step="0.05" value="1.0" class="w-full" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button id="btn-spawn-planet" type="button" class="px-3 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold text-xs transition shadow-md shadow-sky-500/20">
+                + Spawn Planet
+              </button>
+              <button id="btn-spawn-comet" type="button" class="px-3 py-2 rounded-lg bg-purple-500/25 hover:bg-purple-500/35 border border-purple-400/40 text-purple-200 font-semibold text-xs transition">
+                ☄️ Launch Comet
+              </button>
+            </div>
+          </div>
+
+          <!-- Cosmic Events -->
+          <div class="space-y-2">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Cosmic Phenomena</span>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="btn-binary-star" type="button" class="px-3 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 text-xs font-medium transition">
+                ☀️ Binary Star Mode
+              </button>
+              <button id="btn-supernova-wave" type="button" class="px-3 py-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/40 text-rose-200 text-xs font-medium transition">
+                💥 Gravity Pulse
+              </button>
+            </div>
+            <button id="btn-reset-cosmos" type="button" class="w-full px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition">
+              🔄 Reset Solar System
+            </button>
+          </div>
+        </div>
+
+        <!-- Beginner Code Tip Box -->
+        <div class="p-3 rounded-xl bg-sky-950/40 border border-sky-500/30 text-xs space-y-1">
+          <div class="font-semibold text-sky-300">💡 How This Module Works</div>
+          <p class="text-slate-300 leading-relaxed">Every frame (60x/sec), JavaScript calculates Newton's law <code class="text-sky-200 font-mono-tech">F = G·(m₁m₂)/r²</code> to pull each planet toward the central star and updates its 3D coordinates via Three.js WebGL.</p>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==========================================
+         MODULE 2: NEBULA FLOW FIELD & PARTICLE STUDIO
+         ========================================== -->
+    <section id="panel-flow" class="hidden grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+      <div class="lg:col-span-8 xl:col-span-9 relative rounded-2xl overflow-hidden glass-panel min-h-[420px] sm:min-h-[540px] flex flex-col">
+        <div class="hud-header-bar z-10 flex flex-wrap items-center justify-between gap-2">
+          <div class="bg-slate-950/80 backdrop-blur-md border border-slate-800 px-3 py-2 rounded-xl pointer-events-auto">
+            <div class="text-xs font-semibold text-purple-300 flex items-center gap-2">
+              <span>VECTOR VORTEX & FLOW FIELD</span>
+              <span id="flow-particle-badge" class="px-1.5 py-0.5 rounded bg-purple-500/20 text-[11px] font-mono-tech">1,800 Particles</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5">Move or drag your cursor/finger across the canvas to bend the force field in real time</p>
+          </div>
+          <div class="flex items-center gap-2 pointer-events-auto">
+            <button id="btn-flow-shockwave" type="button" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-500 to-purple-500 text-slate-950 font-bold text-xs shadow-lg">⚡ Trigger Shockwave</button>
+            <button id="btn-flow-clear" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200">Clear Trails</button>
+          </div>
+        </div>
+
+        <canvas id="flow-canvas" class="w-full flex-1 cursor-pointer block bg-slate-950"></canvas>
+
+        <div class="bg-slate-950/90 border-t border-slate-800/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono-tech">
+          <div><span class="text-slate-500">CURSOR FORCE:</span> <span id="flow-mode-readout" class="text-sky-300">Swirl Vortex</span></div>
+          <div><span class="text-slate-500">TURBULENCE SCALE:</span> <span id="flow-turb-readout" class="text-purple-300">0.008 rad</span></div>
+          <div><span class="text-slate-500">COORDS:</span> <span id="flow-coords" class="text-emerald-300">Center Attractor</span></div>
+        </div>
+      </div>
+
+      <aside class="lg:col-span-4 xl:col-span-3 glass-panel rounded-2xl p-4 flex flex-col justify-between gap-4">
+        <div class="space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-purple-400">Particle Physics Controls</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Shape thousands of autonomous glowing agents.</p>
+          </div>
+
+          <!-- Interaction Force Mode -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-medium text-slate-300 block">Cursor Force Behavior</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="btn-force-swirl" type="button" class="force-btn px-2.5 py-2 rounded-lg bg-sky-500/25 border border-sky-400 text-sky-200 text-xs font-semibold transition">🌀 Swirl Vortex</button>
+              <button id="btn-force-attract" type="button" class="force-btn px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 text-xs font-medium transition">🧲 Gravity Well</button>
+              <button id="btn-force-repel" type="button" class="force-btn px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 text-xs font-medium transition">🛡️ Force Shield</button>
+              <button id="btn-force-orbit" type="button" class="force-btn px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 text-xs font-medium transition">🪐 Ring Orbit</button>
+            </div>
+          </div>
+
+          <!-- Sliders -->
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-flow-count" class="text-slate-300">Particle Count</label>
+                <span id="val-flow-count" class="font-mono-tech text-sky-300">1800</span>
+              </div>
+              <input id="slider-flow-count" type="range" min="400" max="3500" step="100" value="1800" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-flow-speed" class="text-slate-300">Flow Velocity</label>
+                <span id="val-flow-speed" class="font-mono-tech text-purple-300">2.4</span>
+              </div>
+              <input id="slider-flow-speed" type="range" min="0.5" max="6.0" step="0.2" value="2.4" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-flow-turbulence" class="text-slate-300">Field Complexity</label>
+                <span id="val-flow-turbulence" class="font-mono-tech text-emerald-300">Medium</span>
+              </div>
+              <input id="slider-flow-turbulence" type="range" min="2" max="20" step="1" value="8" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-flow-trail" class="text-slate-300">Trail Persistence</label>
+                <span id="val-flow-trail" class="font-mono-tech text-amber-300">92%</span>
+              </div>
+              <input id="slider-flow-trail" type="range" min="70" max="98" step="1" value="92" class="w-full" />
+            </div>
+          </div>
+
+          <!-- Color Palettes -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-medium text-slate-300 block">Bioluminescent Palette</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button id="btn-pal-cyber" type="button" class="px-2 py-1.5 rounded-lg bg-slate-900 border border-sky-400/50 text-[11px] text-sky-300 font-medium">Cyber Neon</button>
+              <button id="btn-pal-aurora" type="button" class="px-2 py-1.5 rounded-lg bg-slate-900 border border-emerald-400/40 text-[11px] text-emerald-300 font-medium">Aurora</button>
+              <button id="btn-pal-solar" type="button" class="px-2 py-1.5 rounded-lg bg-slate-900 border border-amber-400/40 text-[11px] text-amber-300 font-medium">Solar Flare</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-purple-950/40 border border-purple-500/30 text-xs space-y-1">
+          <div class="font-semibold text-purple-300">💡 How This Module Works</div>
+          <p class="text-slate-300 leading-relaxed">Instead of erasing the HTML5 <code class="text-purple-200 font-mono-tech">&lt;canvas&gt;</code> completely each frame, we draw a semi-transparent black rectangle (<code class="text-purple-200 font-mono-tech">rgba(3,7,18,0.08)</code>), creating glowing light trails!</p>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==========================================
+         MODULE 3: POLYPHONIC SYNTH & SEQUENCER MATRIX
+         ========================================== -->
+    <section id="panel-synth" class="hidden grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+      <div class="lg:col-span-8 xl:col-span-9 glass-panel rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4">
+        <!-- Top Oscilloscope & Transport Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div>
+            <h2 class="text-base font-bold text-sky-300 flex items-center gap-2">
+              <span>🎹 WEB AUDIO POLYPHONIC MATRIX</span>
+              <span id="synth-status-badge" class="px-2 py-0.5 rounded-full text-[11px] font-mono-tech bg-emerald-500/20 text-emerald-300">SEQUENCER READY</span>
+            </h2>
+            <p class="text-xs text-slate-400">Click grid cells to toggle notes • Press Play or play the live synth keys below</p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button id="btn-seq-play" type="button" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition shadow-lg shadow-emerald-500/20 flex items-center gap-1.5">
+              <span id="seq-play-icon">▶</span> <span id="seq-play-text">Start Sequencer</span>
+            </button>
+            <button id="btn-seq-random" type="button" class="px-3 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/40 text-purple-200 text-xs font-semibold transition">
+              🎲 Cosmic Arp
+            </button>
+            <button id="btn-seq-clear" type="button" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition">
+              Clear Grid
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Waveform Visualizer Canvas -->
+        <div class="relative h-28 rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
+          <canvas id="synth-scope-canvas" class="w-full h-full block"></canvas>
+          <div class="absolute top-2 left-3 text-[11px] font-mono-tech text-slate-400">REAL-TIME FFT OSCILLOSCOPE • PENTATONIC HARMONIC SCALE</div>
+          <div id="synth-note-readout" class="absolute top-2 right-3 text-xs font-mono-tech text-sky-400 font-semibold">STANDBY</div>
+        </div>
+
+        <!-- 16-Step x 6-Note Sequencer Matrix -->
+        <div class="overflow-x-auto pb-1">
+          <div id="sequencer-grid" class="min-w-[560px] space-y-1.5"></div>
+        </div>
+
+        <!-- Live Playable Synth Pads / Keyboard -->
+        <div class="pt-2 border-t border-slate-800">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Live Playable Harmonic Pads (Click or Tap)</span>
+            <span class="text-[11px] font-mono-tech text-sky-400">Zero-Latency Web Audio Oscillator</span>
+          </div>
+          <div id="piano-pad-row" class="grid grid-cols-4 sm:grid-cols-8 gap-2"></div>
+        </div>
+      </div>
+
+      <!-- Synth Parameters Sidebar -->
+      <aside class="lg:col-span-4 xl:col-span-3 glass-panel rounded-2xl p-4 flex flex-col justify-between gap-4">
+        <div class="space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-400">Synthesizer Engine</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Shape oscillator waveforms, filter cutoff, and echo delay.</p>
+          </div>
+
+          <!-- Waveform Selector -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-medium text-slate-300 block">Oscillator Waveform</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="wave-sawtooth" type="button" class="wave-btn px-2.5 py-2 rounded-lg bg-sky-500/25 border border-sky-400 text-sky-200 text-xs font-semibold">📐 Sawtooth</button>
+              <button id="wave-triangle" type="button" class="wave-btn px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 text-xs font-medium">🔺 Triangle</button>
+              <button id="wave-square" type="button" class="wave-btn px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 text-xs font-medium">⬛ Square</button>
+              <button id="wave-sine" type="button" class="wave-btn px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 text-xs font-medium">〰️ Pure Sine</button>
+            </div>
+          </div>
+
+          <!-- Audio Sliders -->
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-synth-bpm" class="text-slate-300">Sequencer Tempo</label>
+                <span id="val-synth-bpm" class="font-mono-tech text-emerald-300">124 BPM</span>
+              </div>
+              <input id="slider-synth-bpm" type="range" min="70" max="180" step="2" value="124" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-synth-cutoff" class="text-slate-300">Low-Pass Filter Cutoff</label>
+                <span id="val-synth-cutoff" class="font-mono-tech text-sky-300">2,400 Hz</span>
+              </div>
+              <input id="slider-synth-cutoff" type="range" min="300" max="6000" step="50" value="2400" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-synth-release" class="text-slate-300">Envelope Release</label>
+                <span id="val-synth-release" class="font-mono-tech text-purple-300">0.35 s</span>
+              </div>
+              <input id="slider-synth-release" type="range" min="0.1" max="1.2" step="0.05" value="0.35" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-synth-delay" class="text-slate-300">Stereo Echo Feedback</label>
+                <span id="val-synth-delay" class="font-mono-tech text-amber-300">30%</span>
+              </div>
+              <input id="slider-synth-delay" type="range" min="0" max="75" step="5" value="30" class="w-full" />
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs space-y-1">
+          <div class="font-semibold text-emerald-300">💡 How This Module Works</div>
+          <p class="text-slate-300 leading-relaxed">No MP3 files are used! The browser's native <code class="text-emerald-200 font-mono-tech">AudioContext</code> generates mathematical sound waves in real time and routes them through a BiquadFilter and AnalyserNode.</p>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==========================================
+         MODULE 4: CELLULAR AUTOMATA & EMERGENCE LAB
+         ========================================== -->
+    <section id="panel-life" class="hidden grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+      <div class="lg:col-span-8 xl:col-span-9 relative rounded-2xl overflow-hidden glass-panel min-h-[420px] sm:min-h-[540px] flex flex-col">
+        <div class="hud-header-bar z-10 flex flex-wrap items-center justify-between gap-2">
+          <div class="bg-slate-950/85 backdrop-blur-md border border-slate-800 px-3 py-2 rounded-xl pointer-events-auto">
+            <div class="text-xs font-semibold text-amber-300 flex items-center gap-2">
+              <span>EMERGENT CELLULAR AUTOMATA</span>
+              <span id="life-gen-badge" class="px-1.5 py-0.5 rounded bg-amber-500/20 text-[11px] font-mono-tech">Gen 0</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5">Click or drag on the grid to paint living cells, or stamp a complex structure</p>
+          </div>
+          <div class="flex items-center gap-2 pointer-events-auto">
+            <button id="btn-life-toggle" type="button" class="px-3.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs shadow-lg">⏸ Pause Evolution</button>
+            <button id="btn-life-step" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200">+1 Step</button>
+          </div>
+        </div>
+
+        <canvas id="life-canvas" class="w-full flex-1 cursor-pointer block bg-slate-950"></canvas>
+
+        <div class="bg-slate-950/90 border-t border-slate-800/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono-tech">
+          <div><span class="text-slate-500">LIVING CELLS:</span> <span id="life-pop-readout" class="text-amber-300">0</span></div>
+          <div><span class="text-slate-500">ACTIVE RULE:</span> <span id="life-rule-readout" class="text-sky-300">B3/S23 (Conway)</span></div>
+          <div><span class="text-slate-500">GRID DENSITY:</span> <span id="life-density-readout" class="text-emerald-300">12%</span></div>
+        </div>
+      </div>
+
+      <aside class="lg:col-span-4 xl:col-span-3 glass-panel rounded-2xl p-4 flex flex-col justify-between gap-4">
+        <div class="space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-amber-400">Bio-Digital Ruleset</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Explore how simple local rules create self-replicating machines.</p>
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="select-life-rule" class="text-xs font-medium text-slate-300 block">Evolutionary Rule Algorithm</label>
+            <select id="select-life-rule" class="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-400">
+              <option value="conway">Conway's Life (B3/S23) — Classic</option>
+              <option value="highlife">HighLife (B36/S23) — Self-Replicators</option>
+              <option value="daynight">Day & Night (B3678/S34678) — Symmetric</option>
+            </select>
+          </div>
+
+          <div class="space-y-1.5">
+            <span class="text-xs font-medium text-slate-300 block">Inject Pattern Presets</span>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="btn-life-pulsar" type="button" class="px-2.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-amber-400/40 text-amber-200 text-xs font-medium">🌟 Pulsar Star</button>
+              <button id="btn-life-glidergun" type="button" class="px-2.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-sky-400/40 text-sky-200 text-xs font-medium">🛸 Glider Stream</button>
+              <button id="btn-life-random" type="button" class="px-2.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-purple-400/40 text-purple-200 text-xs font-medium">🎲 Soup Seed</button>
+              <button id="btn-life-clear" type="button" class="px-2.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-medium">🧹 Clear Grid</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <label for="slider-life-speed" class="text-slate-300">Simulation Tick Rate</label>
+              <span id="val-life-speed" class="font-mono-tech text-amber-300">15 Gen/s</span>
+            </div>
+            <input id="slider-life-speed" type="range" min="2" max="30" step="1" value="15" class="w-full" />
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-amber-950/40 border border-amber-500/30 text-xs space-y-1">
+          <div class="font-semibold text-amber-300">💡 How This Module Works</div>
+          <p class="text-slate-300 leading-relaxed">A 2D array stores each cell's state and age. Every tick counts the 8 neighbors of each cell—cells with 3 neighbors are born, and cells with 2 or 3 survive!</p>
+        </div>
+      </aside>
+    </section>
+
+
+    <!-- ==========================================
+         MODULE 5: PRISM BREAKER & PINBALL ARCADE
+         ========================================== -->
+    <section id="panel-arcade" class="hidden grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+      <div class="lg:col-span-8 xl:col-span-9 relative rounded-2xl overflow-hidden glass-panel min-h-[420px] sm:min-h-[540px] flex flex-col">
+        <div class="hud-header-bar z-10 flex flex-wrap items-center justify-between gap-2">
+          <div class="bg-slate-950/80 backdrop-blur-md border border-slate-800 px-3 py-2 rounded-xl pointer-events-auto">
+            <div class="text-xs font-semibold text-sky-300 flex items-center gap-2">
+              <span>🕹️ PRISM BREAKER NEON ARCADE</span>
+              <span id="arcade-score-badge" class="px-1.5 py-0.5 rounded bg-sky-500/20 text-[11px] font-mono-tech">Score: 0</span>
+              <span id="arcade-combo-badge" class="px-1.5 py-0.5 rounded bg-purple-500/20 text-[11px] font-mono-tech">x1 Combo</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5">Move cursor, touch, or use Left/Right keys to steer the glass paddle • Catch glowing power-up orbs!</p>
+          </div>
+          <div class="flex items-center gap-2 pointer-events-auto">
+            <button id="btn-arcade-multiball" type="button" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-400 to-purple-500 text-slate-950 font-bold text-xs shadow-lg">⚡ Spawn Multi-Ball</button>
+            <button id="btn-arcade-restart" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200">New Wave</button>
+          </div>
+        </div>
+
+        <canvas id="arcade-canvas" class="w-full flex-1 cursor-ew-resize block bg-slate-950/70"></canvas>
+
+        <div class="bg-slate-950/90 border-t border-slate-800/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono-tech">
+          <div><span class="text-slate-500">ACTIVE BALLS:</span> <span id="arcade-balls-readout" class="text-sky-300">1</span></div>
+          <div><span class="text-slate-500">PRISMS LEFT:</span> <span id="arcade-bricks-readout" class="text-emerald-300">48</span></div>
+          <div><span class="text-slate-500">HIGH SCORE:</span> <span id="arcade-high-readout" class="text-amber-300">0</span></div>
+        </div>
+      </div>
+
+      <aside class="lg:col-span-4 xl:col-span-3 glass-panel rounded-2xl p-4 flex flex-col justify-between gap-4">
+        <div class="space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-sky-400">Arcade Modifiers</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Customize physics, paddle width, and gravity curves.</p>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-arcade-speed" class="text-slate-300">Ball Energy Speed</label>
+                <span id="val-arcade-speed" class="font-mono-tech text-sky-300">1.0x</span>
+              </div>
+              <input id="slider-arcade-speed" type="range" min="0.6" max="1.8" step="0.1" value="1.0" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-arcade-paddle" class="text-slate-300">Glass Paddle Width</label>
+                <span id="val-arcade-paddle" class="font-mono-tech text-purple-300">130 px</span>
+              </div>
+              <input id="slider-arcade-paddle" type="range" min="80" max="220" step="10" value="130" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-arcade-gravity" class="text-slate-300">Pinball Curve Gravity</label>
+                <span id="val-arcade-gravity" class="font-mono-tech text-amber-300">Low</span>
+              </div>
+              <input id="slider-arcade-gravity" type="range" min="0" max="0.18" step="0.02" value="0.04" class="w-full" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btn-arcade-laser" type="button" class="px-3 py-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-emerald-200 text-xs font-semibold transition">
+              💥 Laser Row Blast
+            </button>
+            <button id="btn-arcade-slowmo" type="button" class="px-3 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 text-xs font-semibold transition">
+              ⏱️ Bullet Time
+            </button>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-sky-950/40 border border-sky-500/30 text-xs space-y-1">
+          <div class="font-semibold text-sky-300">💡 How This Game Works</div>
+          <p class="text-slate-300 leading-relaxed">Elastic collision math reflects velocity vectors depending on where the ball strikes the frosted glass paddle, spawning particle sparks and harmonic synth chimes on every brick hit!</p>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==========================================
+         MODULE 6: KALEIDOSCOPE & FIREWORKS STUDIO
+         ========================================== -->
+    <section id="panel-mandala" class="hidden grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+      <div class="lg:col-span-8 xl:col-span-9 relative rounded-2xl overflow-hidden glass-panel min-h-[420px] sm:min-h-[540px] flex flex-col">
+        <div class="hud-header-bar z-10 flex flex-wrap items-center justify-between gap-2">
+          <div class="bg-slate-950/80 backdrop-blur-md border border-slate-800 px-3 py-2 rounded-xl pointer-events-auto">
+            <div class="text-xs font-semibold text-pink-300 flex items-center gap-2">
+              <span>🎆 SYMMETRY MANDALA & FIREWORKS</span>
+              <span id="mandala-sym-badge" class="px-1.5 py-0.5 rounded bg-pink-500/20 text-[11px] font-mono-tech">12-Fold Symmetry</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5">Drag across the canvas to paint glowing mirrored silk ribbons • Click or tap to launch fireworks!</p>
+          </div>
+          <div class="flex items-center gap-2 pointer-events-auto">
+            <button id="btn-mandala-burst" type="button" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-pink-500 to-amber-400 text-slate-950 font-bold text-xs shadow-lg">🎆 Grand Finale Burst</button>
+            <button id="btn-mandala-clear" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200">Clear Canvas</button>
+          </div>
+        </div>
+
+        <canvas id="mandala-canvas" class="w-full flex-1 cursor-crosshair block bg-slate-950/70"></canvas>
+
+        <div class="bg-slate-950/90 border-t border-slate-800/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono-tech">
+          <div><span class="text-slate-500">MIRROR RAYS:</span> <span id="mandala-rays-readout" class="text-pink-300">12 Axes</span></div>
+          <div><span class="text-slate-500">ACTIVE SPARKS:</span> <span id="mandala-sparks-readout" class="text-amber-300">0</span></div>
+          <div><span class="text-slate-500">BRUSH STYLE:</span> <span id="mandala-brush-readout" class="text-sky-300">Neon Silk + Sparks</span></div>
+        </div>
+      </div>
+
+      <aside class="lg:col-span-4 xl:col-span-3 glass-panel rounded-2xl p-4 flex flex-col justify-between gap-4">
+        <div class="space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-pink-400">Kaleidoscope Controls</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Configure radial rotational symmetry and firework physics.</p>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-mandala-rays" class="text-slate-300">Symmetry Fold Count</label>
+                <span id="val-mandala-rays" class="font-mono-tech text-pink-300">12 Rays</span>
+              </div>
+              <input id="slider-mandala-rays" type="range" min="4" max="24" step="2" value="12" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-mandala-size" class="text-slate-300">Glow Brush Thickness</label>
+                <span id="val-mandala-size" class="font-mono-tech text-sky-300">3.5 px</span>
+              </div>
+              <input id="slider-mandala-size" type="range" min="1" max="10" step="0.5" value="3.5" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-mandala-fade" class="text-slate-300">Auto-Fade Glow Decay</label>
+                <span id="val-mandala-fade" class="font-mono-tech text-amber-300">Slow</span>
+              </div>
+              <input id="slider-mandala-fade" type="range" min="0" max="10" step="1" value="2" class="w-full" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btn-mandala-auto" type="button" class="px-3 py-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/40 text-purple-200 text-xs font-semibold transition">
+              🌀 Auto-Spirograph
+            </button>
+            <button id="btn-mandala-ring" type="button" class="px-3 py-2 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-sky-200 text-xs font-semibold transition">
+              💫 Nova Ring
+            </button>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-pink-950/40 border border-pink-500/30 text-xs space-y-1">
+          <div class="font-semibold text-pink-300">💡 How Symmetry Math Works</div>
+          <p class="text-slate-300 leading-relaxed">Every brush stroke is rotated <code class="text-pink-200 font-mono-tech">2π / N</code> radians around the center and reflected across each axis using <code class="text-pink-200 font-mono-tech">ctx.rotate()</code>!</p>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==========================================
+         MODULE 7: ASTRO-SHIELD 360° ORBITAL DEFENSE GAME
+         ========================================== -->
+    <section id="panel-defender" class="hidden grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+      <div class="lg:col-span-8 xl:col-span-9 relative rounded-2xl overflow-hidden glass-panel min-h-[420px] sm:min-h-[540px] flex flex-col">
+        <div class="hud-header-bar z-10 flex flex-wrap items-center justify-between gap-2">
+          <div class="bg-slate-950/80 backdrop-blur-md border border-slate-800 px-3 py-1.5 rounded-xl">
+            <div class="text-xs font-semibold text-emerald-300 flex flex-wrap items-center gap-2">
+              <span>🚀 ASTRO-SHIELD: 360° ORBITAL DEFENSE</span>
+              <span id="def-score-badge" class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-[11px] font-mono-tech">Score: 0</span>
+              <span id="def-wave-badge" class="px-1.5 py-0.5 rounded bg-sky-500/20 text-[11px] font-mono-tech">Wave 1</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5">Aim with touch/mouse or A/D/Arrow keys • Auto-Fire active + Tap/Space to burst • Protect the Core!</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="btn-def-emp" type="button" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-400 to-sky-500 text-slate-950 font-bold text-xs shadow-lg">💥 EMP Nova (3)</button>
+            <button id="btn-def-restart" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200">New Mission</button>
+          </div>
+        </div>
+
+        <canvas id="defender-canvas" class="w-full flex-1 cursor-crosshair block bg-slate-950/75 min-h-[320px]"></canvas>
+
+        <div class="bg-slate-950/90 border-t border-slate-800/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono-tech">
+          <div><span class="text-slate-500">CORE INTEGRITY:</span> <span id="def-hull-readout" class="text-emerald-300">100%</span></div>
+          <div><span class="text-slate-500">ORBITAL DRONES:</span> <span id="def-drones-readout" class="text-sky-300">1 Active</span></div>
+          <div><span class="text-slate-500">HIGH SCORE:</span> <span id="def-high-readout" class="text-amber-300">0</span></div>
+        </div>
+      </div>
+
+      <aside class="lg:col-span-4 xl:col-span-3 glass-panel rounded-2xl p-4 flex flex-col justify-between gap-4">
+        <div class="space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-400">Tactical Defense Deck</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Upgrade plasma cannons, deploy autonomous drones, and tune threat speed.</p>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-def-firerate" class="text-slate-300">Plasma Cannon Fire Rate</label>
+                <span id="val-def-firerate" class="font-mono-tech text-emerald-300">Rapid (7/s)</span>
+              </div>
+              <input id="slider-def-firerate" type="range" min="3" max="14" step="1" value="7" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-def-speed" class="text-slate-300">Meteor Threat Speed</label>
+                <span id="val-def-speed" class="font-mono-tech text-sky-300">1.0x</span>
+              </div>
+              <input id="slider-def-speed" type="range" min="0.5" max="2.0" step="0.1" value="1.0" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-def-spread" class="text-slate-300">Multi-Barrel Spread</label>
+                <span id="val-def-spread" class="font-mono-tech text-purple-300">Triple Shot</span>
+              </div>
+              <input id="slider-def-spread" type="range" min="1" max="5" step="2" value="3" class="w-full" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btn-def-drone" type="button" class="px-3 py-2 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-sky-200 text-xs font-semibold transition">
+              🛰️ +Add Guard Drone
+            </button>
+            <button id="btn-def-repair" type="button" class="px-3 py-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-emerald-200 text-xs font-semibold transition">
+              🛡️ Repair Core Shield
+            </button>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs space-y-1">
+          <div class="font-semibold text-emerald-300">💡 How This Game Works</div>
+          <p class="text-slate-300 leading-relaxed">Polar trigonometry (<code class="text-emerald-200 font-mono-tech">atan2(dy, dx)</code>) locks your turret onto touch or cursor coordinates while autonomous guard drones orbit and intercept incoming meteors!</p>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==========================================
+         MODULE 8: CYBER-PULSE NEON AIR HOCKEY DUEL
+         ========================================== -->
+    <section id="panel-cyberpong" class="hidden grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+      <div class="lg:col-span-8 xl:col-span-9 relative rounded-2xl overflow-hidden glass-panel min-h-[420px] sm:min-h-[540px] flex flex-col">
+        <div class="hud-header-bar z-10 flex flex-wrap items-center justify-between gap-2">
+          <div class="bg-slate-950/80 backdrop-blur-md border border-slate-800 px-3 py-1.5 rounded-xl">
+            <div class="text-xs font-semibold text-amber-300 flex flex-wrap items-center gap-2">
+              <span>⚡ CYBER-PULSE: NEON AIR HOCKEY DUEL</span>
+              <span id="pong-score-badge" class="px-1.5 py-0.5 rounded bg-sky-500/20 text-[11px] font-mono-tech">YOU 0 : 0 AI</span>
+              <span id="pong-rally-badge" class="px-1.5 py-0.5 rounded bg-amber-500/20 text-[11px] font-mono-tech">Rally: 0</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5">Move mouse/finger or Left/Right keys to steer your cyan striker • Ricochet pucks off glowing gravity bumpers!</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="btn-pong-multiball" type="button" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-400 to-pink-500 text-slate-950 font-bold text-xs shadow-lg">⚡ +Chaos Puck</button>
+            <button id="btn-pong-restart" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200">Reset Match</button>
+          </div>
+        </div>
+
+        <canvas id="cyberpong-canvas" class="w-full flex-1 cursor-pointer block bg-slate-950/75 min-h-[320px]"></canvas>
+
+        <div class="bg-slate-950/90 border-t border-slate-800/80 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs font-mono-tech">
+          <div><span class="text-slate-500">PLAYER GOALS:</span> <span id="pong-player-readout" class="text-sky-300">0</span></div>
+          <div><span class="text-slate-500">QUANTUM AI GOALS:</span> <span id="pong-ai-readout" class="text-rose-400">0</span></div>
+          <div><span class="text-slate-500">ARENA BUMPERS:</span> <span id="pong-bumpers-readout" class="text-amber-300">Active (3)</span></div>
+        </div>
+      </div>
+
+      <aside class="lg:col-span-4 xl:col-span-3 glass-panel rounded-2xl p-4 flex flex-col justify-between gap-4">
+        <div class="space-y-4">
+          <div class="border-b border-slate-800 pb-3">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-amber-400">Arena Physics Deck</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Tune puck speed, AI reflex intelligence, and bumper pinball obstacles.</p>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-pong-speed" class="text-slate-300">Puck Energy Velocity</label>
+                <span id="val-pong-speed" class="font-mono-tech text-amber-300">1.0x</span>
+              </div>
+              <input id="slider-pong-speed" type="range" min="0.6" max="1.8" step="0.1" value="1.0" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-pong-ai" class="text-slate-300">Quantum AI Reflex Level</label>
+                <span id="val-pong-ai" class="font-mono-tech text-rose-300">Balanced</span>
+              </div>
+              <input id="slider-pong-ai" type="range" min="1" max="5" step="1" value="3" class="w-full" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <label for="slider-pong-pad" class="text-slate-300">Striker Mallet Radius</label>
+                <span id="val-pong-pad" class="font-mono-tech text-sky-300">28 px</span>
+              </div>
+              <input id="slider-pong-pad" type="range" min="18" max="42" step="2" value="28" class="w-full" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btn-pong-bumpers" type="button" class="px-3 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 text-xs font-semibold transition">
+              🔮 Toggle Bumpers
+            </button>
+            <button id="btn-pong-boost" type="button" class="px-3 py-2 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-sky-200 text-xs font-semibold transition">
+              🚀 Hyper-Smash Puck
+            </button>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-amber-950/40 border border-amber-500/30 text-xs space-y-1">
+          <div class="font-semibold text-amber-300">💡 How This Game Works</div>
+          <p class="text-slate-300 leading-relaxed">2D circle-to-circle momentum transfer calculates normal and tangent collision vectors between your striker mallet, the glowing puck, and pinball bumper prisms!</p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <!-- INTERACTIVE "HOW IT WORKS" ARCHITECTURE MODAL -->
+  <div id="modal-guide" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-panel rounded-2xl max-w-2xl w-full p-5 sm:p-6 border border-sky-500/40 space-y-4 max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-lg font-bold text-sky-300">📘 Inside Aether Nexus: How This App Is Built</h3>
+          <p class="text-xs text-slate-400">A beginner-friendly breakdown of the 4 core layers powering this single-file web application</p>
+        </div>
+        <button id="btn-guide-close" type="button" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm">✕</button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1.5">
+          <div class="font-bold text-sky-300">1. HTML5 Structure & Canvas</div>
+          <p class="text-slate-300 leading-relaxed">The skeleton uses semantic tags (<code class="text-sky-200">&lt;header&gt;</code>, <code class="text-sky-200">&lt;main&gt;</code>, <code class="text-sky-200">&lt;section&gt;</code>) and high-speed drawing surfaces (<code class="text-sky-200">&lt;canvas&gt;</code>) where JavaScript paints 3D worlds and particles 60 times per second.</p>
+        </div>
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1.5">
+          <div class="font-bold text-purple-300">2. CSS Glassmorphism & Variables</div>
+          <p class="text-slate-300 leading-relaxed">Translucent panels use <code class="text-purple-200">backdrop-filter: blur(16px)</code> and CSS custom properties (<code class="text-purple-200">--accent-primary</code>) so clicking the theme button recolors the entire interface instantly.</p>
+        </div>
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1.5">
+          <div class="font-bold text-emerald-300">3. Real-Time Render Loop</div>
+          <p class="text-slate-300 leading-relaxed">Using <code class="text-emerald-200">requestAnimationFrame()</code>, the browser updates only the active module's physics math, keeping the animation silky smooth at 60 FPS without draining CPU.</p>
+        </div>
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1.5">
+          <div class="font-bold text-amber-300">4. Procedural Web Audio Synth</div>
+          <p class="text-slate-300 leading-relaxed">Every click, launch chime, and musical note is synthesized mathematically using the browser's <code class="text-amber-200">AudioContext</code>—zero external audio files required.</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button id="btn-guide-gotit" type="button" class="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition">Back to Sandbox</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast-banner" class="fixed bottom-4 right-4 z-50 pointer-events-none opacity-0 translate-y-2 transition-all duration-300 glass-panel px-4 py-2.5 rounded-xl border border-sky-400/40 text-xs font-medium text-sky-200 shadow-xl">
+    System initialized
+  </div>
+
+  <script>
+    // =========================================================================
+    // GLOBAL STATE & UTILITIES
+    // =========================================================================
+    let activeModule = 'cosmos';
+    let sfxEnabled = true;
+    const themes = [
+      { id: 'cyber', label: 'Cyber Blue', primary: '#38bdf8', secondary: '#a855f7' },
+      { id: 'emerald', label: 'Bio Emerald', primary: '#10b981', secondary: '#06b6d4' },
+      { id: 'solar', label: 'Solar Gold', primary: '#f59e0b', secondary: '#ec4899' }
+    ];
+    let currentThemeIdx = 0;
+
+    let toastTimeout = null;
+    function showToast(msg) {
+      const el = document.getElementById('toast-banner');
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.remove('opacity-0', 'translate-y-2');
+      el.classList.add('opacity-100', 'translate-y-0');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        el.classList.remove('opacity-100', 'translate-y-0');
+        el.classList.add('opacity-0', 'translate-y-2');
+      }, 2400);
+    }
+
+    // =========================================================================
+    // WEB AUDIO ENGINE (UI SFX + POLYPHONIC SYNTHESIZER)
+    // =========================================================================
+    let audioCtx = null;
+    let analyserNode = null;
+    let delayNode = null;
+    let feedbackGain = null;
+
+    function ensureAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+          analyserNode = audioCtx.createAnalyser();
+          analyserNode.fftSize = 256;
+
+          delayNode = audioCtx.createDelay(1.0);
+          delayNode.delayTime.value = 0.24;
+          feedbackGain = audioCtx.createGain();
+          feedbackGain.gain.value = 0.3;
+
+          delayNode.connect(feedbackGain);
+          feedbackGain.connect(delayNode);
+          delayNode.connect(analyserNode);
+          analyserNode.connect(audioCtx.destination);
+        }
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playUISound(freq = 520, duration = 0.08, type = 'sine') {
+      if (!sfxEnabled) return;
+      ensureAudioContext();
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.35, now + duration);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + duration);
+    }
+
+    // =========================================================================
+    // MODULE 1: 3D ORBITAL & GRAVITY SANDBOX (THREE.JS)
+    // =========================================================================
+    let scene, camera, renderer, starMesh, starMesh2, starLight;
+    let planets = [];
+    let timeScale = 1.0;
+    let starMass = 1.0;
+    let binaryMode = false;
+    let collisionCount = 0;
+    let camMode = 'orbit';
+    let camAngle = 0.6;
+    let camRadius = 95;
+    let launchRadius = 1.8;
+    let launchVelMultiplier = 1.0;
+
+    const planetColors = [0x38bdf8, 0xa855f7, 0x10b981, 0xf59e0b, 0xf43f5e, 0x22d3ee, 0xe879f9];
+
+    function initCosmos3D() {
+      const container = document.getElementById('cosmos-viewport');
+      if (!container || typeof THREE === 'undefined') return;
+
+      const w = container.clientWidth || 800;
+      const h = container.clientHeight || 480;
+
+      scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x030712, 0.0028);
+
+      camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 1000);
+      camera.position.set(0, 50, 85);
+      camera.lookAt(0, 0, 0);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+      renderer.setSize(w, h);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      container.innerHTML = '';
+      container.appendChild(renderer.domElement);
+
+      // Ambient & Point Lights
+      const ambient = new THREE.AmbientLight(0x334155, 1.2);
+      scene.add(ambient);
+
+      starLight = new THREE.PointLight(0xfde047, 2.6, 350);
+      starLight.position.set(0, 0, 0);
+      scene.add(starLight);
+
+      // Background Starfield
+      const starGeo = new THREE.BufferGeometry();
+      const starCount = 1200;
+      const starPos = new Float32Array(starCount * 3);
+      for (let i = 0; i < starCount * 3; i++) {
+        starPos[i] = (Math.random() - 0.5) * 450;
+      }
+      starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+      const starMat = new THREE.PointsMaterial({ color: 0x94a3b8, size: 0.9, transparent: true, opacity: 0.8 });
+      const starField = new THREE.Points(starGeo, starMat);
+      scene.add(starField);
+
+      // Central Primary Star + Accretion Halo
+      const coreGeo = new THREE.SphereGeometry(5.2, 32, 32);
+      const coreMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+      starMesh = new THREE.Mesh(coreGeo, coreMat);
+      scene.add(starMesh);
+
+      const haloGeo = new THREE.RingGeometry(6.8, 10.5, 48);
+      const haloMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.35
+      });
+      const haloRing = new THREE.Mesh(haloGeo, haloMat);
+      haloRing.rotation.x = Math.PI / 2;
+      starMesh.add(haloRing);
+
+      // Companion Binary Star (hidden initially)
+      const coreGeo2 = new THREE.SphereGeometry(3.8, 28, 28);
+      const coreMat2 = new THREE.MeshBasicMaterial({ color: 0xec4899 });
+      starMesh2 = new THREE.Mesh(coreGeo2, coreMat2);
+      starMesh2.visible = false;
+      scene.add(starMesh2);
+
+      // Seed Initial Solar System
+      resetSolarSystem(false);
+
+      // Click in 3D Viewport to Launch Exoplanet
+      renderer.domElement.addEventListener('pointerdown', (e) => {
+        const rect = renderer.domElement.getBoundingClientRect();
+        const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera);
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        const intersect = new THREE.Vector3();
+        raycaster.ray.intersectPlane(plane, intersect);
+
+        if (intersect && intersect.length() > 9 && intersect.length() < 120) {
+          spawnPlanetAt(intersect.x, intersect.z, launchRadius, launchVelMultiplier, false);
+          playUISound(660, 0.11, 'triangle');
+        }
+      });
+    }
+
+    function spawnPlanetAt(x, z, radius = 1.8, velMult = 1.0, isComet = false) {
+      if (!scene) return;
+      const r = Math.max(10, Math.hypot(x, z));
+      const baseSpeed = Math.sqrt((38 * starMass) / r) * velMult;
+      const angle = Math.atan2(z, x);
+      const vx = -Math.sin(angle) * baseSpeed;
+      const vz = Math.cos(angle) * baseSpeed;
+
+      const color = isComet ? 0x22d3ee : planetColors[planets.length % planetColors.length];
+      const geo = new THREE.SphereGeometry(radius, 24, 24);
+      const mat = new THREE.MeshStandardMaterial({
+        color,
+        roughness: 0.3,
+        metalness: 0.2,
+        emissive: color,
+        emissiveIntensity: isComet ? 0.6 : 0.25
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, (Math.random() - 0.5) * 2.5, z);
+      scene.add(mesh);
+
+      // Orbit Trail Line
+      const maxTrail = isComet ? 90 : 65;
+      const trailPositions = new Float32Array(maxTrail * 3);
+      for (let i = 0; i < maxTrail; i++) {
+        trailPositions[i * 3] = mesh.position.x;
+        trailPositions[i * 3 + 1] = mesh.position.y;
+        trailPositions[i * 3 + 2] = mesh.position.z;
+      }
+      const trailGeo = new THREE.BufferGeometry();
+      trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+      const trailMat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.55 });
+      const trailLine = new THREE.Line(trailGeo, trailMat);
+      scene.add(trailLine);
+
+      planets.push({
+        mesh,
+        trailLine,
+        maxTrail,
+        vx,
+        vy: (Math.random() - 0.5) * 0.15,
+        vz,
+        mass: radius * radius,
+        radius
+      });
+
+      updateCosmosHUD(`Launched ${isComet ? 'High-Velocity Comet' : 'Exoplanet'} at ${r.toFixed(1)} AU`);
+    }
+
+    function resetSolarSystem(announce = true) {
+      if (!scene) return;
+      planets.forEach((p) => {
+        scene.remove(p.mesh);
+        scene.remove(p.trailLine);
+      });
+      planets = [];
+      collisionCount = 0;
+      const distances = [16, 24, 33, 43, 54, 66];
+      const radii = [1.3, 1.7, 2.1, 1.6, 2.9, 2.4];
+      distances.forEach((d, idx) => {
+        const a = (idx / distances.length) * Math.PI * 2;
+        spawnPlanetAt(Math.cos(a) * d, Math.sin(a) * d, radii[idx], 1.0, false);
+      });
+      if (announce) {
+        playUISound(440, 0.12, 'sine');
+        showToast('Solar system reset to 6 stable planetary orbits');
+      }
+      updateCosmosHUD('System stable: 6 exoplanets in Keplerian orbit');
+    }
+
+    function updateCosmosHUD(eventText) {
+      const countEl = document.getElementById('cosmos-body-count');
+      if (countEl) countEl.textContent = `${planets.length} Bodies`;
+      const colEl = document.getElementById('telemetry-collisions');
+      if (colEl) colEl.textContent = String(collisionCount);
+      if (eventText) {
+        const evEl = document.getElementById('cosmos-last-event');
+        if (evEl) evEl.textContent = eventText;
+      }
+    }
+
+    let binaryTick = 0;
+    function stepCosmosPhysics() {
+      if (!scene || !renderer) return;
+
+      const dt = 0.16 * timeScale;
+      binaryTick += 0.025 * timeScale;
+
+      if (binaryMode) {
+        starMesh.position.set(Math.cos(binaryTick) * 7, 0, Math.sin(binaryTick) * 7);
+        starMesh2.position.set(-Math.cos(binaryTick) * 7, 0, -Math.sin(binaryTick) * 7);
+        starMesh2.visible = true;
+      } else {
+        starMesh.position.set(0, 0, 0);
+        starMesh2.visible = false;
+      }
+      starMesh.rotation.y += 0.01;
+
+      let totalEnergy = 0;
+      const G = 38 * starMass;
+
+      for (let i = planets.length - 1; i >= 0; i--) {
+        const p = planets[i];
+        const dx = starMesh.position.x - p.mesh.position.x;
+        const dy = starMesh.position.y - p.mesh.position.y;
+        const dz = starMesh.position.z - p.mesh.position.z;
+        const distSq = Math.max(25, dx * dx + dy * dy + dz * dz);
+        const dist = Math.sqrt(distSq);
+        const force = G / distSq;
+
+        p.vx += (dx / dist) * force * dt;
+        p.vy += (dy / dist) * force * dt;
+        p.vz += (dz / dist) * force * dt;
+
+        if (binaryMode) {
+          const dx2 = starMesh2.position.x - p.mesh.position.x;
+          const dz2 = starMesh2.position.z - p.mesh.position.z;
+          const d2Sq = Math.max(25, dx2 * dx2 + dz2 * dz2);
+          const d2 = Math.sqrt(d2Sq);
+          const f2 = (G * 0.65) / d2Sq;
+          p.vx += (dx2 / d2) * f2 * dt;
+          p.vz += (dz2 / d2) * f2 * dt;
+        }
+
+        p.mesh.position.x += p.vx * dt;
+        p.mesh.position.y += p.vy * dt;
+        p.mesh.position.z += p.vz * dt;
+
+        // Update trail buffer
+        const arr = p.trailLine.geometry.attributes.position.array;
+        for (let k = p.maxTrail - 1; k > 0; k--) {
+          arr[k * 3] = arr[(k - 1) * 3];
+          arr[k * 3 + 1] = arr[(k - 1) * 3 + 1];
+          arr[k * 3 + 2] = arr[(k - 1) * 3 + 2];
+        }
+        arr[0] = p.mesh.position.x;
+        arr[1] = p.mesh.position.y;
+        arr[2] = p.mesh.position.z;
+        p.trailLine.geometry.attributes.position.needsUpdate = true;
+
+        const speedSq = p.vx * p.vx + p.vy * p.vy + p.vz * p.vz;
+        totalEnergy += 0.5 * p.mass * speedSq;
+      }
+
+      const energyEl = document.getElementById('telemetry-energy');
+      if (energyEl) energyEl.textContent = `${(totalEnergy * 12.4).toFixed(1)} GJ`;
+
+      // Camera positioning
+      camAngle += 0.0025 * (timeScale > 0 ? 1 : 0.2);
+      if (camMode === 'orbit') {
+        camera.position.set(
+          Math.cos(camAngle) * camRadius,
+          camRadius * 0.48,
+          Math.sin(camAngle) * camRadius
+        );
+      } else if (camMode === 'top') {
+        camera.position.set(0, camRadius * 1.15, 0.01);
+      } else if (camMode === 'close') {
+        camera.position.set(Math.cos(camAngle * 2) * 32, 14, Math.sin(camAngle * 2) * 32);
+      }
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+    }
+
+    // =========================================================================
+    // MODULE 2: NEBULA FLOW FIELD & PARTICLE ATTRACTOR
+    // =========================================================================
+    let flowCanvas, flowCtx;
+    let flowParticles = [];
+    let flowCount = 1800;
+    let flowSpeed = 2.4;
+    let flowTurbulence = 8;
+    let flowTrail = 0.92;
+    let flowForceMode = 'swirl';
+    let flowPalette = 'cyber';
+    let flowPointer = { x: 400, y: 260, active: false };
+    let flowTick = 0;
+
+    const palettes = {
+      cyber: ['#38bdf8', '#818cf8', '#c084fc', '#22d3ee', '#f472b6'],
+      aurora: ['#10b981', '#34d399', '#06b6d4', '#a7f3d0', '#38bdf8'],
+      solar: ['#f59e0b', '#fbbf24', '#f43f5e', '#fb7185', '#fde047']
+    };
+
+    function initFlowField() {
+      flowCanvas = document.getElementById('flow-canvas');
+      if (!flowCanvas) return;
+      flowCtx = flowCanvas.getContext('2d');
+      resizeFlowCanvas();
+      rebuildFlowParticles();
+
+      const updatePointer = (e) => {
+        const rect = flowCanvas.getBoundingClientRect();
+        flowPointer.x = e.clientX - rect.left;
+        flowPointer.y = e.clientY - rect.top;
+        flowPointer.active = true;
+        const coordEl = document.getElementById('flow-coords');
+        if (coordEl) coordEl.textContent = `X:${Math.round(flowPointer.x)} Y:${Math.round(flowPointer.y)}`;
+      };
+
+      flowCanvas.addEventListener('pointermove', updatePointer);
+      flowCanvas.addEventListener('pointerdown', (e) => {
+        if (flowCanvas.setPointerCapture && e.pointerId !== undefined) {
+          try { flowCanvas.setPointerCapture(e.pointerId); } catch (err) {}
+        }
+        updatePointer(e);
+        triggerFlowShockwave();
+      });
+      flowCanvas.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches[0]) updatePointer(e.touches[0]);
+      }, { passive: true });
+      flowCanvas.addEventListener('pointerleave', () => {
+        flowPointer.active = false;
+      });
+    }
+
+    function resizeFlowCanvas() {
+      if (!flowCanvas) return;
+      const w = flowCanvas.clientWidth || 800;
+      const h = flowCanvas.clientHeight || 480;
+      flowCanvas.width = w;
+      flowCanvas.height = h;
+      flowPointer.x = w / 2;
+      flowPointer.y = h / 2;
+    }
+
+    function rebuildFlowParticles() {
+      if (!flowCanvas) return;
+      const w = flowCanvas.width || 800;
+      const h = flowCanvas.height || 480;
+      const cols = palettes[flowPalette] || palettes.cyber;
+      flowParticles = [];
+      for (let i = 0; i < flowCount; i++) {
+        flowParticles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: 0,
+          vy: 0,
+          color: cols[i % cols.length],
+          size: Math.random() * 1.8 + 0.8
+        });
+      }
+      const badge = document.getElementById('flow-particle-badge');
+      if (badge) badge.textContent = `${flowCount.toLocaleString()} Particles`;
+    }
+
+    function triggerFlowShockwave() {
+      playUISound(310, 0.14, 'sawtooth');
+      flowParticles.forEach((p) => {
+        const dx = p.x - flowPointer.x;
+        const dy = p.y - flowPointer.y;
+        const d = Math.max(8, Math.hypot(dx, dy));
+        const push = Math.min(18, 900 / d);
+        p.vx += (dx / d) * push;
+        p.vy += (dy / d) * push;
+      });
+    }
+
+    function stepFlowField() {
+      if (!flowCtx || !flowCanvas) return;
+      const w = flowCanvas.width;
+      const h = flowCanvas.height;
+      flowTick += 0.008;
+
+      flowCtx.fillStyle = `rgba(3, 7, 18, ${1 - flowTrail})`;
+      flowCtx.fillRect(0, 0, w, h);
+
+      const scale = flowTurbulence * 0.0012;
+
+      for (let i = 0; i < flowParticles.length; i++) {
+        const p = flowParticles[i];
+        const angle =
+          Math.sin(p.x * scale + flowTick) * Math.cos(p.y * scale - flowTick) * Math.PI * 2 +
+          Math.cos((p.x + p.y) * scale * 0.5) * Math.PI;
+
+        p.vx = p.vx * 0.88 + Math.cos(angle) * flowSpeed * 0.25;
+        p.vy = p.vy * 0.88 + Math.sin(angle) * flowSpeed * 0.25;
+
+        // Cursor attractor / vortex influence
+        const dx = flowPointer.x - p.x;
+        const dy = flowPointer.y - p.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 220 && dist > 1) {
+          const factor = (1 - dist / 220) * 1.45;
+          if (flowForceMode === 'swirl') {
+            p.vx += (-dy / dist) * factor * 1.6 + (dx / dist) * factor * 0.35;
+            p.vy += (dx / dist) * factor * 1.6 + (dy / dist) * factor * 0.35;
+          } else if (flowForceMode === 'attract') {
+            p.vx += (dx / dist) * factor * 1.4;
+            p.vy += (dy / dist) * factor * 1.4;
+          } else if (flowForceMode === 'repel') {
+            p.vx -= (dx / dist) * factor * 2.2;
+            p.vy -= (dy / dist) * factor * 2.2;
+          } else if (flowForceMode === 'orbit') {
+            const targetOffset = dist - 95;
+            p.vx += (-dy / dist) * factor * 1.8 + (dx / dist) * (targetOffset * 0.015);
+            p.vy += (dx / dist) * factor * 1.8 + (dy / dist) * (targetOffset * 0.015);
+          }
+        }
+
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < 0) p.x = w;
+        if (p.x > w) p.x = 0;
+        if (p.y < 0) p.y = h;
+        if (p.y > h) p.y = 0;
+
+        flowCtx.fillStyle = p.color;
+        flowCtx.fillRect(p.x, p.y, p.size, p.size);
+      }
+    }
+
+    // =========================================================================
+    // MODULE 3: POLYPHONIC SYNTHESIZER & 16-STEP SEQUENCER
+    // =========================================================================
+    const synthNotes = [
+      { name: 'C5', freq: 523.25, color: 'text-sky-300' },
+      { name: 'A4', freq: 440.00, color: 'text-indigo-300' },
+      { name: 'G4', freq: 392.00, color: 'text-purple-300' },
+      { name: 'E4', freq: 329.63, color: 'text-emerald-300' },
+      { name: 'D4', freq: 293.66, color: 'text-amber-300' },
+      { name: 'C4', freq: 261.63, color: 'text-rose-300' }
+    ];
+    const padNotes = [
+      { name: 'C4', freq: 261.63 },
+      { name: 'D4', freq: 293.66 },
+      { name: 'E4', freq: 329.63 },
+      { name: 'G4', freq: 392.00 },
+      { name: 'A4', freq: 440.00 },
+      { name: 'C5', freq: 523.25 },
+      { name: 'D5', freq: 587.33 },
+      { name: 'E5', freq: 659.25 }
+    ];
+
+    let seqGrid = Array.from({ length: 6 }, () => Array(16).fill(false));
+    let seqPlaying = false;
+    let seqStep = 0;
+    let seqTimer = null;
+    let synthWave = 'sawtooth';
+    let synthBpm = 124;
+    let synthCutoff = 2400;
+    let synthRelease = 0.35;
+
+    function initSynthModule() {
+      const gridContainer = document.getElementById('sequencer-grid');
+      if (!gridContainer) return;
+
+      // Default cosmic arp pattern
+      const defaultHits = [
+        [0, 4, 8, 12],
+        [2, 6, 10, 14],
+        [1, 5, 9, 13],
+        [3, 7, 11, 15],
+        [0, 8],
+        [4, 12]
+      ];
+      defaultHits.forEach((cols, r) => cols.forEach((c) => { seqGrid[r][c] = true; }));
+
+      renderSequencerGrid();
+      renderPianoPads();
+    }
+
+    function renderSequencerGrid() {
+      const gridContainer = document.getElementById('sequencer-grid');
+      if (!gridContainer) return;
+      gridContainer.innerHTML = '';
+
+      synthNotes.forEach((note, rIdx) => {
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-17 gap-1 items-center flex';
+
+        const label = document.createElement('div');
+        label.className = `w-12 text-xs font-mono-tech font-bold ${note.color}`;
+        label.textContent = note.name;
+        row.appendChild(label);
+
+        const stepsWrap = document.createElement('div');
+        stepsWrap.className = 'flex-1 grid grid-cols-16 gap-1.5';
+        stepsWrap.style.display = 'grid';
+        stepsWrap.style.gridTemplateColumns = 'repeat(16, minmax(0, 1fr))';
+
+        for (let cIdx = 0; cIdx < 16; cIdx++) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.dataset.row = String(rIdx);
+          btn.dataset.col = String(cIdx);
+          btn.className = `seq-cell h-8 rounded-md border ${
+            seqGrid[rIdx][cIdx]
+              ? 'active border-sky-300'
+              : cIdx % 4 === 0
+              ? 'bg-slate-900 border-slate-700 hover:border-slate-500'
+              : 'bg-slate-900/60 border-slate-800 hover:border-slate-600'
+          }`;
+          btn.addEventListener('click', () => {
+            seqGrid[rIdx][cIdx] = !seqGrid[rIdx][cIdx];
+            btn.classList.toggle('active', seqGrid[rIdx][cIdx]);
+            if (seqGrid[rIdx][cIdx]) {
+              triggerSynthVoice(note.freq, note.name);
+            }
+          });
+          stepsWrap.appendChild(btn);
+        }
+
+        row.appendChild(stepsWrap);
+        gridContainer.appendChild(row);
+      });
+    }
+
+    function renderPianoPads() {
+      const row = document.getElementById('piano-pad-row');
+      if (!row) return;
+      row.innerHTML = '';
+      padNotes.forEach((n) => {
+        const pad = document.createElement('button');
+        pad.type = 'button';
+        pad.className = 'piano-key py-3 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-center flex flex-col items-center gap-1 shadow-md';
+        pad.innerHTML = `<span class="text-xs font-bold text-sky-300">${n.name}</span><span class="text-[10px] font-mono-tech text-slate-400">${Math.round(n.freq)}Hz</span>`;
+        pad.addEventListener('pointerdown', () => {
+          triggerSynthVoice(n.freq, n.name);
+        });
+        row.appendChild(pad);
+      });
+    }
+
+    function triggerSynthVoice(freq, noteName = '') {
+      ensureAudioContext();
+      if (!audioCtx) return;
+
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const filter = audioCtx.createBiquadFilter();
+      const gain = audioCtx.createGain();
+
+      osc.type = synthWave;
+      osc.frequency.setValueAtTime(freq, now);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(synthCutoff, now);
+      filter.Q.value = 3.5;
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.16, now + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0008, now + synthRelease);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(analyserNode);
+      gain.connect(delayNode);
+
+      osc.start(now);
+      osc.stop(now + synthRelease + 0.02);
+
+      if (noteName) {
+        const readout = document.getElementById('synth-note-readout');
+        if (readout) readout.textContent = `NOTE: ${noteName} (${freq.toFixed(1)} Hz)`;
+      }
+    }
+
+    function stepSequencerTick() {
+      const cells = document.querySelectorAll('.seq-cell');
+      cells.forEach((cell) => {
+        const c = Number(cell.dataset.col);
+        cell.classList.toggle('playing-col', c === seqStep);
+      });
+
+      synthNotes.forEach((note, rIdx) => {
+        if (seqGrid[rIdx][seqStep]) {
+          triggerSynthVoice(note.freq, note.name);
+        }
+      });
+
+      seqStep = (seqStep + 1) % 16;
+    }
+
+    function startStopSequencer(forceStop = false) {
+      if (seqPlaying || forceStop) {
+        seqPlaying = false;
+        if (seqTimer) clearInterval(seqTimer);
+        seqTimer = null;
+        document.getElementById('seq-play-icon').textContent = '▶';
+        document.getElementById('seq-play-text').textContent = 'Start Sequencer';
+        document.getElementById('synth-status-badge').textContent = 'STANDBY';
+        return;
+      }
+      ensureAudioContext();
+      seqPlaying = true;
+      document.getElementById('seq-play-icon').textContent = '⏹';
+      document.getElementById('seq-play-text').textContent = 'Stop Sequencer';
+      document.getElementById('synth-status-badge').textContent = 'PLAYING MATRIX';
+      const intervalMs = (60 / synthBpm / 4) * 1000;
+      stepSequencerTick();
+      seqTimer = setInterval(stepSequencerTick, intervalMs);
+    }
+
+    function drawSynthOscilloscope() {
+      const canvas = document.getElementById('synth-scope-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = (canvas.width = canvas.clientWidth || 600);
+      const h = (canvas.height = canvas.clientHeight || 110);
+
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, w, h);
+
+      // Center grid line
+      ctx.strokeStyle = 'rgba(51, 65, 85, 0.4)';
+      ctx.beginPath();
+      ctx.moveTo(0, h / 2);
+      ctx.lineTo(w, h / 2);
+      ctx.stroke();
+
+      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = '#38bdf8';
+      ctx.beginPath();
+
+      if (analyserNode && audioCtx && audioCtx.state === 'running') {
+        const bufferLength = analyserNode.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyserNode.getByteTimeDomainData(dataArray);
+        const sliceWidth = w / bufferLength;
+        let x = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          const v = dataArray[i] / 128.0;
+          const y = (v * h) / 2;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+          x += sliceWidth;
+        }
+      } else {
+        const t = performance.now() * 0.003;
+        for (let x = 0; x < w; x += 4) {
+          const y = h / 2 + Math.sin(x * 0.03 + t) * 12 * Math.cos(x * 0.01 - t);
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
+    }
+
+    // =========================================================================
+    // MODULE 4: CELLULAR AUTOMATA LAB
+    // =========================================================================
+    let lifeCanvas, lifeCtx;
+    const lifeCols = 72;
+    const lifeRows = 44;
+    let lifeGrid = [];
+    let lifeRunning = true;
+    let lifeGeneration = 0;
+    let lifeRule = 'conway';
+    let lifeSpeed = 15;
+    let lastLifeStep = 0;
+    let lifePainting = false;
+
+    function initLifeModule() {
+      lifeCanvas = document.getElementById('life-canvas');
+      if (!lifeCanvas) return;
+      lifeCtx = lifeCanvas.getContext('2d');
+      seedLifeRandom(0.22);
+
+      const paintCell = (e) => {
+        const rect = lifeCanvas.getBoundingClientRect();
+        const c = Math.floor(((e.clientX - rect.left) / rect.width) * lifeCols);
+        const r = Math.floor(((e.clientY - rect.top) / rect.height) * lifeRows);
+        if (r >= 0 && r < lifeRows && c >= 0 && c < lifeCols) {
+          lifeGrid[r][c] = 1;
+          if (r + 1 < lifeRows) lifeGrid[r + 1][c] = 1;
+          drawLifeGrid();
+        }
+      };
+
+      lifeCanvas.addEventListener('pointerdown', (e) => {
+        lifePainting = true;
+        paintCell(e);
+        playUISound(620, 0.05, 'sine');
+      });
+      lifeCanvas.addEventListener('pointermove', (e) => {
+        if (lifePainting) paintCell(e);
+      });
+      window.addEventListener('pointerup', () => {
+        lifePainting = false;
+      });
+    }
+
+    function createEmptyLifeGrid() {
+      return Array.from({ length: lifeRows }, () => Array(lifeCols).fill(0));
+    }
+
+    function seedLifeRandom(prob = 0.22) {
+      lifeGrid = createEmptyLifeGrid();
+      for (let r = 0; r < lifeRows; r++) {
+        for (let c = 0; c < lifeCols; c++) {
+          lifeGrid[r][c] = Math.random() < prob ? 1 : 0;
+        }
+      }
+      lifeGeneration = 0;
+      updateLifeTelemetry();
+      drawLifeGrid();
+    }
+
+    function stampPulsar() {
+      lifeGrid = createEmptyLifeGrid();
+      const cr = Math.floor(lifeRows / 2);
+      const cc = Math.floor(lifeCols / 2);
+      const offsets = [-6, -5, -4, -2, -1, 1, 2, 4, 5, 6];
+      offsets.forEach((o) => {
+        if (cr + o >= 0 && cr + o < lifeRows) {
+          lifeGrid[cr + o][cc - 3] = 1;
+          lifeGrid[cr + o][cc + 3] = 1;
+        }
+        if (cc + o >= 0 && cc + o < lifeCols) {
+          lifeGrid[cr - 3][cc + o] = 1;
+          lifeGrid[cr + 3][cc + o] = 1;
+        }
+      });
+      lifeGeneration = 0;
+      updateLifeTelemetry();
+      drawLifeGrid();
+    }
+
+    function stampGliderStream() {
+      lifeGrid = createEmptyLifeGrid();
+      const coords = [
+        [5, 5], [6, 6], [7, 4], [7, 5], [7, 6],
+        [15, 18], [16, 19], [17, 17], [17, 18], [17, 19],
+        [25, 32], [26, 33], [27, 31], [27, 32], [27, 33]
+      ];
+      coords.forEach(([r, c]) => {
+        if (lifeGrid[r] && lifeGrid[r][c] !== undefined) lifeGrid[r][c] = 1;
+      });
+      lifeGeneration = 0;
+      updateLifeTelemetry();
+      drawLifeGrid();
+    }
+
+    function stepLifeGeneration() {
+      const next = createEmptyLifeGrid();
+      for (let r = 0; r < lifeRows; r++) {
+        for (let c = 0; c < lifeCols; c++) {
+          let neighbors = 0;
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              if (dr === 0 && dc === 0) continue;
+              const nr = (r + dr + lifeRows) % lifeRows;
+              const nc = (c + dc + lifeCols) % lifeCols;
+              if (lifeGrid[nr][nc] > 0) neighbors++;
+            }
+          }
+          const alive = lifeGrid[r][c] > 0;
+          let survive = false;
+          let born = false;
+
+          if (lifeRule === 'conway') {
+            born = neighbors === 3;
+            survive = neighbors === 2 || neighbors === 3;
+          } else if (lifeRule === 'highlife') {
+            born = neighbors === 3 || neighbors === 6;
+            survive = neighbors === 2 || neighbors === 3;
+          } else if (lifeRule === 'daynight') {
+            born = [3, 6, 7, 8].includes(neighbors);
+            survive = [3, 4, 6, 7, 8].includes(neighbors);
+          }
+
+          if (alive && survive) {
+            next[r][c] = Math.min(10, lifeGrid[r][c] + 1);
+          } else if (!alive && born) {
+            next[r][c] = 1;
+          } else {
+            next[r][c] = 0;
+          }
+        }
+      }
+      lifeGrid = next;
+      lifeGeneration++;
+      updateLifeTelemetry();
+      drawLifeGrid();
+    }
+
+    function updateLifeTelemetry() {
+      let pop = 0;
+      for (let r = 0; r < lifeRows; r++) {
+        for (let c = 0; c < lifeCols; c++) {
+          if (lifeGrid[r][c] > 0) pop++;
+        }
+      }
+      const genEl = document.getElementById('life-gen-badge');
+      if (genEl) genEl.textContent = `Gen ${lifeGeneration}`;
+      const popEl = document.getElementById('life-pop-readout');
+      if (popEl) popEl.textContent = pop.toLocaleString();
+      const densEl = document.getElementById('life-density-readout');
+      if (densEl) densEl.textContent = `${Math.round((pop / (lifeRows * lifeCols)) * 100)}%`;
+    }
+
+    function drawLifeGrid() {
+      if (!lifeCtx || !lifeCanvas) return;
+      const w = (lifeCanvas.width = lifeCanvas.clientWidth || 720);
+      const h = (lifeCanvas.height = lifeCanvas.clientHeight || 440);
+      const cellW = w / lifeCols;
+      const cellH = h / lifeRows;
+
+      lifeCtx.fillStyle = '#030712';
+      lifeCtx.fillRect(0, 0, w, h);
+
+      for (let r = 0; r < lifeRows; r++) {
+        for (let c = 0; c < lifeCols; c++) {
+          const age = lifeGrid[r][c];
+          if (age > 0) {
+            lifeCtx.fillStyle = age === 1 ? '#38bdf8' : age < 4 ? '#a855f7' : '#f59e0b';
+            lifeCtx.fillRect(c * cellW + 1, r * cellH + 1, cellW - 2, cellH - 2);
+          } else {
+            lifeCtx.fillStyle = 'rgba(30, 41, 59, 0.28)';
+            lifeCtx.fillRect(c * cellW + cellW * 0.4, r * cellH + cellH * 0.4, 1.5, 1.5);
+          }
+        }
+      }
+    }
+
+
+    // =========================================================================
+    // INTERACTIVE TOUCH & MICROPHONE SOUND-REACTIVE LIQUID AURORA BACKGROUND
+    // =========================================================================
+    let bgCanvas, bgCtx;
+    let bgScale = 0.55; // Render blurred background at 0.55x resolution for silky 60 FPS on mobile & desktop
+    let bgTouchOnly = true; // Only illuminate where user touches/moves or where sound ripples bloom
+    let bgColorMode = 'dark';
+    let bgPointer = { x: -500, y: -500, lastX: -500, lastY: -500, radius: 0, targetRadius: 0, isDown: false };
+    let bgRipples = [];
+    let bgBlades = [];
+
+    // Microphone Sound-Reactive State (Controlled via #btn-mic-mode or 'S' key)
+    const micModes = [
+      { id: 'off', label: 'Mic: Off', icon: '🎙️' },
+      { id: 'pulse', label: 'Mic: Pulse Aura', icon: '🟢' },
+      { id: 'spectrum', label: 'Mic: Bass Nova', icon: '📊' },
+      { id: 'hybrid', label: 'Mic + Synth Sync', icon: '🔮' }
+    ];
+    let micModeIdx = 0;
+    let micStream = null;
+    let micSourceNode = null;
+    let micAnalyser = null;
+    let micFreqData = new Uint8Array(64);
+    let micPermissionGranted = false;
+    let micSimulatedFallback = false;
+    let micSmoothedLevel = 0;
+    let micBassEnergy = 0;
+    let micTrebleEnergy = 0;
+    let lastMicRippleTime = 0;
+
+    async function enableMicrophoneInput() {
+      ensureAudioContext();
+      if (micAnalyser && (micPermissionGranted || micSimulatedFallback)) return;
+      if (!micAnalyser && audioCtx) {
+        micAnalyser = audioCtx.createAnalyser();
+        micAnalyser.fftSize = 128;
+        micAnalyser.smoothingTimeConstant = 0.78;
+        micFreqData = new Uint8Array(micAnalyser.frequencyBinCount);
+      }
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+          });
+          if (audioCtx && micAnalyser) {
+            micSourceNode = audioCtx.createMediaStreamSource(micStream);
+            micSourceNode.connect(micAnalyser);
+            micPermissionGranted = true;
+            micSimulatedFallback = false;
+            showToast('🎙️ Live Microphone Connected! Speak, clap, or play music to animate the background (Press S to change/off)');
+            return;
+          }
+        } catch (err) {
+          micSimulatedFallback = true;
+          showToast('🎙️ Mic permission unavailable — using Harmonic Sound Simulation + Synth Reactivity (Press S to cycle/off)');
+        }
+      } else {
+        micSimulatedFallback = true;
+        showToast('🎙️ Using Harmonic Sound Simulation + Synth Reactivity (Press S to cycle/off)');
+      }
+    }
+
+    function stopMicrophoneStream() {
+      if (micStream) {
+        micStream.getTracks().forEach((tr) => tr.stop());
+        micStream = null;
+      }
+      if (micSourceNode) {
+        try { micSourceNode.disconnect(); } catch (e) {}
+        micSourceNode = null;
+      }
+      micPermissionGranted = false;
+      micSmoothedLevel = 0;
+      const bar = document.getElementById('mic-level-bar');
+      if (bar) bar.style.width = '0%';
+    }
+
+    async function cycleMicSoundMode() {
+      micModeIdx = (micModeIdx + 1) % micModes.length;
+      const mode = micModes[micModeIdx];
+      const iconEl = document.getElementById('mic-mode-icon');
+      const labelEl = document.getElementById('mic-mode-label');
+      const btnEl = document.getElementById('btn-mic-mode');
+
+      if (iconEl) iconEl.textContent = mode.icon;
+      if (labelEl) labelEl.textContent = mode.label;
+
+      playUISound(mode.id === 'off' ? 380 : 620 + micModeIdx * 90, 0.08, 'triangle');
+
+      if (mode.id === 'off') {
+        stopMicrophoneStream();
+        if (btnEl) {
+          btnEl.classList.remove('neon-border');
+        }
+        showToast('🔇 Background Mic Sound-Reactivity Turned OFF (Press S or click button to re-enable)');
+      } else {
+        if (btnEl) {
+          btnEl.classList.add('neon-border');
+        }
+        await enableMicrophoneInput();
+        if (micPermissionGranted || micSimulatedFallback) {
+          showToast(`${mode.icon} Background Sound Mode: ${mode.label} (Press S to switch mode or turn off)`);
+        }
+      }
+    }
+
+    function sampleAudioReactivity(now) {
+      const mode = micModes[micModeIdx].id;
+      if (mode === 'off') {
+        micSmoothedLevel *= 0.85;
+        return;
+      }
+
+      let rawSum = 0;
+      let bassSum = 0;
+      let trebleSum = 0;
+      const bins = micFreqData.length;
+
+      if (micPermissionGranted && micAnalyser) {
+        micAnalyser.getByteFrequencyData(micFreqData);
+        for (let i = 0; i < bins; i++) {
+          const val = micFreqData[i];
+          rawSum += val;
+          if (i < 10) bassSum += val;
+          else if (i > 24) trebleSum += val;
+        }
+      }
+
+      // Also blend internal synth/SFX analyser if in 'hybrid' mode or fallback mode
+      if ((mode === 'hybrid' || micSimulatedFallback) && analyserNode && audioCtx && audioCtx.state === 'running') {
+        const synthBins = new Uint8Array(analyserNode.frequencyBinCount);
+        analyserNode.getByteFrequencyData(synthBins);
+        for (let i = 0; i < Math.min(bins, synthBins.length); i++) {
+          const v = synthBins[i];
+          micFreqData[i] = Math.max(micFreqData[i] || 0, v);
+          rawSum += v * 0.85;
+          if (i < 10) bassSum += v * 0.85;
+          else if (i > 24) trebleSum += v * 0.85;
+        }
+      }
+
+      // If fallback mode and no synth playing, generate organic ambient acoustic waves so visuals still respond
+      if (micSimulatedFallback && rawSum < 80) {
+        const simBeat = Math.pow(Math.max(0, Math.sin(now * 0.0045)), 4) * 190;
+        for (let i = 0; i < bins; i++) {
+          const val = Math.min(255, Math.floor(simBeat * Math.exp(-i * 0.04) + (Math.sin(now * 0.008 + i * 0.3) + 1) * 28));
+          micFreqData[i] = val;
+          rawSum += val;
+          if (i < 10) bassSum += val;
+          else if (i > 24) trebleSum += val;
+        }
+      }
+
+      const normLevel = Math.min(1, rawSum / (bins * 135));
+      micSmoothedLevel = micSmoothedLevel * 0.78 + normLevel * 0.22;
+      micBassEnergy = Math.min(1, bassSum / (10 * 185));
+      micTrebleEnergy = Math.min(1, trebleSum / (Math.max(1, bins - 24) * 140));
+
+      const bar = document.getElementById('mic-level-bar');
+      if (bar) {
+        bar.style.width = `${Math.min(100, Math.round(micSmoothedLevel * 125))}%`;
+      }
+
+      // Spawn sound-driven ripples when voice/music exceeds threshold
+      if (micSmoothedLevel > 0.14 && now - lastMicRippleTime > (mode === 'spectrum' ? 95 : 150)) {
+        lastMicRippleTime = now;
+        const vw = window.innerWidth || 1200;
+        const vh = window.innerHeight || 800;
+        const rx = bgPointer.x > 0 && bgPointer.targetRadius > 20
+          ? bgPointer.x + (Math.random() - 0.5) * 140
+          : vw * (0.2 + Math.random() * 0.6);
+        const ry = bgPointer.y > 0 && bgPointer.targetRadius > 20
+          ? bgPointer.y + (Math.random() - 0.5) * 140
+          : vh * (0.25 + Math.random() * 0.55);
+        spawnBgRippleNode(rx, ry, micBassEnergy > 0.45, micSmoothedLevel);
+      }
+    }
+
+    function spawnBgRippleNode(x, y, burst = false, soundBoost = 0) {
+      const sx = x * bgScale;
+      const sy = y * bgScale;
+      const boost = 1 + soundBoost * 0.9;
+      bgRipples.push({
+        x: sx,
+        y: sy,
+        r: (burst ? 30 : 18) * bgScale * boost,
+        maxR: (burst ? 330 : 215) * bgScale * boost,
+        alpha: Math.min(0.95, (burst ? 0.85 : 0.58) + soundBoost * 0.25),
+        hue: (performance.now() * 0.09 + soundBoost * 140) % 360
+      });
+      if (bgRipples.length > 44) bgRipples.shift();
+    }
+
+    function initTouchBackground() {
+      bgCanvas = document.getElementById('bg-touch-canvas');
+      if (!bgCanvas) return;
+      bgCtx = bgCanvas.getContext('2d', { alpha: true });
+      resizeTouchBackground();
+
+      document.body.classList.add('touch-drag-lock');
+
+      const updateDragTrail = (x, y, burst = false) => {
+        if (bgPointer.lastX > 0 && bgPointer.lastY > 0 && !burst) {
+          const dx = x - bgPointer.lastX;
+          const dy = y - bgPointer.lastY;
+          const dist = Math.hypot(dx, dy);
+          const steps = Math.min(5, Math.max(1, Math.floor(dist / 28)));
+          for (let i = 1; i <= steps; i++) {
+            const ix = bgPointer.lastX + (dx * i) / steps;
+            const iy = bgPointer.lastY + (dy * i) / steps;
+            spawnBgRippleNode(ix, iy, false, micSmoothedLevel);
+          }
+        } else {
+          spawnBgRippleNode(x, y, burst, micSmoothedLevel);
+        }
+        bgPointer.lastX = x;
+        bgPointer.lastY = y;
+        bgPointer.x = x;
+        bgPointer.y = y;
+        bgPointer.targetRadius = 320;
+      };
+
+      window.addEventListener('pointerdown', (e) => {
+        bgPointer.isDown = true;
+        bgPointer.lastX = e.clientX;
+        bgPointer.lastY = e.clientY;
+        updateDragTrail(e.clientX, e.clientY, true);
+      }, { passive: true });
+
+      window.addEventListener('pointermove', (e) => {
+        updateDragTrail(e.clientX, e.clientY, false);
+      }, { passive: true });
+
+      window.addEventListener('pointerup', () => {
+        bgPointer.isDown = false;
+        bgPointer.lastX = -500;
+        bgPointer.lastY = -500;
+      }, { passive: true });
+
+      window.addEventListener('touchstart', (e) => {
+        if (!e.touches || e.touches.length === 0) return;
+        bgPointer.isDown = true;
+        const t = e.touches[0];
+        bgPointer.lastX = t.clientX;
+        bgPointer.lastY = t.clientY;
+        updateDragTrail(t.clientX, t.clientY, true);
+      }, { passive: true });
+
+      window.addEventListener('touchmove', (e) => {
+        if (!e.touches || e.touches.length === 0) return;
+        const t = e.touches[0];
+        updateDragTrail(t.clientX, t.clientY, false);
+      }, { passive: true });
+
+      window.addEventListener('touchend', () => {
+        bgPointer.isDown = false;
+        bgPointer.lastX = -500;
+        bgPointer.lastY = -500;
+      }, { passive: true });
+
+      document.addEventListener('mouseleave', () => {
+        bgPointer.targetRadius = 0;
+        bgPointer.lastX = -500;
+        bgPointer.lastY = -500;
+      });
+
+      // Keyboard shortcut 'S' to change or turn off Microphone Sound-Reactive Background
+      window.addEventListener('keydown', (e) => {
+        const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+        if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+        if (e.key === 's' || e.key === 'S') {
+          e.preventDefault();
+          cycleMicSoundMode();
+        }
+      });
+    }
+
+    function resizeTouchBackground() {
+      if (!bgCanvas) return;
+      const vw = window.innerWidth || 1200;
+      const vh = window.innerHeight || 800;
+      bgScale = vw < 768 ? 0.45 : 0.55;
+      bgCanvas.width = Math.max(320, Math.floor(vw * bgScale));
+      bgCanvas.height = Math.max(240, Math.floor(vh * bgScale));
+
+      bgBlades = [];
+      const count = vw < 768 ? 56 : 84;
+      for (let i = 0; i < count; i++) {
+        bgBlades.push({
+          x: (i / count) * bgCanvas.width,
+          h: (85 + Math.random() * 155) * bgScale,
+          phase: Math.random() * Math.PI * 2,
+          speed: 0.0015 + Math.random() * 0.002,
+          hue: 165 + Math.random() * 110
+        });
+      }
+    }
+
+    function stepTouchBackground(now) {
+      if (!bgCtx || !bgCanvas) return;
+      sampleAudioReactivity(now);
+
+      const w = bgCanvas.width;
+      const h = bgCanvas.height;
+      const mode = micModes[micModeIdx].id;
+      const audioActive = mode !== 'off' && micSmoothedLevel > 0.02;
+
+      bgCtx.clearRect(0, 0, w, h);
+      const soundRadiusBoost = audioActive ? micSmoothedLevel * 280 : 0;
+      bgPointer.radius += ((bgPointer.targetRadius + soundRadiusBoost) - bgPointer.radius) * 0.12;
+      bgPointer.targetRadius *= 0.985;
+
+      const px = bgPointer.x * bgScale;
+      const py = bgPointer.y * bgScale;
+      const pr = bgPointer.radius * bgScale;
+
+      bgCtx.save();
+      if (bgTouchOnly) {
+        bgCtx.beginPath();
+        if (pr > 3) {
+          bgCtx.arc(px, py, pr, 0, Math.PI * 2);
+        }
+        // When Mic Sound is active, also open an acoustic bloom aperture in the center & along the bottom spectrum
+        if (audioActive) {
+          const soundAperture = (120 + micSmoothedLevel * 380 + micBassEnergy * 180) * bgScale;
+          bgCtx.moveTo(w * 0.5 + soundAperture, h * 0.5);
+          bgCtx.arc(w * 0.5, h * 0.5, soundAperture, 0, Math.PI * 2);
+          if (mode === 'spectrum' || mode === 'hybrid') {
+            bgCtx.rect(0, h - (180 + micSmoothedLevel * 180) * bgScale, w, (180 + micSmoothedLevel * 180) * bgScale);
+          }
+        }
+        for (let i = 0; i < bgRipples.length; i++) {
+          const rp = bgRipples[i];
+          bgCtx.moveTo(rp.x + rp.r, rp.y);
+          bgCtx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
+        }
+        bgCtx.clip();
+      }
+
+      // Draw soft glowing aurora blobs (reacting to mic bass & treble energy)
+      const t = now * 0.0008 + (audioActive ? micSmoothedLevel * 0.25 : 0);
+      for (let i = 0; i < 3; i++) {
+        const bx = w * (0.25 + 0.25 * i) + Math.sin(t + i * 2) * (160 * bgScale);
+        const by = h * 0.45 + Math.cos(t * 1.3 + i) * (130 * bgScale);
+        const blobR = (310 + (audioActive ? micBassEnergy * 210 : 0)) * bgScale;
+        const grad = bgCtx.createRadialGradient(bx, by, 8 * bgScale, bx, by, blobR);
+        const hue = (i * 90 + now * 0.02 + (audioActive ? micTrebleEnergy * 120 : 0)) % 360;
+        const alpha = Math.min(0.78, 0.44 + (audioActive ? micSmoothedLevel * 0.34 : 0));
+        grad.addColorStop(0, `hsla(${hue}, 92%, ${bgColorMode === 'light' ? '62%' : '54%'}, ${alpha})`);
+        grad.addColorStop(1, 'hsla(0, 0%, 0%, 0)');
+        bgCtx.fillStyle = grad;
+        bgCtx.fillRect(0, 0, w, h);
+      }
+
+      // Draw interactive swaying bioluminescent grass / liquid filaments that respond to BOTH touch & mic frequency bins
+      for (let i = 0; i < bgBlades.length; i++) {
+        const b = bgBlades[i];
+        const dx = px - b.x;
+        const dist = Math.abs(dx);
+        const reach = 240 * bgScale;
+        const touchBend = dist < reach ? (dx / reach) * (45 * bgScale) : 0;
+
+        const freqBin = micFreqData[i % micFreqData.length] || 0;
+        const audioHeightBoost = audioActive ? (freqBin / 255) * (135 * bgScale) : 0;
+        const audioSwayBoost = audioActive ? Math.sin(now * 0.012 + i * 0.4) * (micBassEnergy * 34 * bgScale) : 0;
+
+        const sway = Math.sin(now * b.speed + b.phase) * (26 * bgScale) + touchBend + audioSwayBoost;
+        const totalH = b.h + audioHeightBoost;
+        const bladeHue = (b.hue + (audioActive ? (freqBin / 255) * 65 : 0)) % 360;
+
+        bgCtx.strokeStyle = `hsla(${bladeHue}, 92%, ${bgColorMode === 'light' ? '48%' : '60%'}, ${audioActive ? 0.72 : 0.55})`;
+        bgCtx.lineWidth = Math.max(2, (4.5 + (audioActive ? micBassEnergy * 2.5 : 0)) * bgScale);
+        bgCtx.lineCap = 'round';
+        bgCtx.beginPath();
+        bgCtx.moveTo(b.x, h);
+        bgCtx.quadraticCurveTo(b.x + sway * 0.5, h - totalH * 0.5, b.x + sway, h - totalH);
+        bgCtx.stroke();
+      }
+
+      // Draw expanding touch & microphone sound ripples
+      for (let i = bgRipples.length - 1; i >= 0; i--) {
+        const rp = bgRipples[i];
+        rp.r += (rp.maxR - rp.r) * 0.075;
+        rp.alpha *= 0.94;
+        if (rp.alpha < 0.015) {
+          bgRipples.splice(i, 1);
+          continue;
+        }
+        const g = bgCtx.createRadialGradient(rp.x, rp.y, 2, rp.x, rp.y, rp.r);
+        g.addColorStop(0, `hsla(${rp.hue}, 95%, 60%, ${rp.alpha})`);
+        g.addColorStop(1, `hsla(${(rp.hue + 50) % 360}, 95%, 50%, 0)`);
+        bgCtx.fillStyle = g;
+        bgCtx.beginPath();
+        bgCtx.arc(rp.x, rp.y, rp.r, 0, Math.PI * 2);
+        bgCtx.fill();
+      }
+
+      bgCtx.restore();
+    }
+
+    // =========================================================================
+    // MODULE 5: PRISM BREAKER NEON ARCADE
+    // =========================================================================
+    let arcadeCanvas, arcadeCtx;
+    let arcadePaddle = { x: 300, w: 130, h: 14 };
+    let arcadeBalls = [];
+    let arcadeBricks = [];
+    let arcadeSparks = [];
+    let arcadeScore = 0;
+    let arcadeHighScore = 0;
+    let arcadeCombo = 1;
+    let arcadeSpeedMult = 1.0;
+    let arcadeGravity = 0.04;
+
+    function initArcadeModule() {
+      arcadeCanvas = document.getElementById('arcade-canvas');
+      if (!arcadeCanvas) return;
+      arcadeCtx = arcadeCanvas.getContext('2d');
+      resizeArcadeCanvas();
+      resetArcadeWave(false);
+
+      arcadeCanvas.addEventListener('pointermove', (e) => {
+        const rect = arcadeCanvas.getBoundingClientRect();
+        arcadePaddle.x = Math.max(
+          arcadePaddle.w / 2,
+          Math.min(arcadeCanvas.width - arcadePaddle.w / 2, e.clientX - rect.left)
+        );
+      });
+      arcadeCanvas.addEventListener('pointerdown', (e) => {
+        const rect = arcadeCanvas.getBoundingClientRect();
+        arcadePaddle.x = e.clientX - rect.left;
+        if (arcadeBalls.length === 0) spawnArcadeBall();
+      });
+      window.addEventListener('keydown', (e) => {
+        if (activeModule !== 'arcade') return;
+        if (e.key === 'ArrowLeft') arcadePaddle.x = Math.max(arcadePaddle.w / 2, arcadePaddle.x - 28);
+        if (e.key === 'ArrowRight') arcadePaddle.x = Math.min(arcadeCanvas.width - arcadePaddle.w / 2, arcadePaddle.x + 28);
+      });
+    }
+
+    function resizeArcadeCanvas() {
+      if (!arcadeCanvas) return;
+      arcadeCanvas.width = arcadeCanvas.clientWidth || 760;
+      arcadeCanvas.height = arcadeCanvas.clientHeight || 460;
+      arcadePaddle.x = arcadeCanvas.width / 2;
+      if (arcadeBricks.length === 0) buildArcadeBricks();
+    }
+
+    function buildArcadeBricks() {
+      if (!arcadeCanvas) return;
+      arcadeBricks = [];
+      const cols = 8;
+      const rows = 5;
+      const pad = 10;
+      const bw = (arcadeCanvas.width - pad * (cols + 1)) / cols;
+      const bh = 22;
+      const hues = [195, 265, 320, 150, 42];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          arcadeBricks.push({
+            x: pad + c * (bw + pad),
+            y: 62 + r * (bh + pad),
+            w: bw,
+            h: bh,
+            hue: hues[r % hues.length],
+            alive: true
+          });
+        }
+      }
+      updateArcadeHUD();
+    }
+
+    function spawnArcadeBall() {
+      if (!arcadeCanvas) return;
+      arcadeBalls.push({
+        x: arcadePaddle.x,
+        y: arcadeCanvas.height - 42,
+        vx: (Math.random() - 0.5) * 6,
+        vy: -5.2,
+        hue: Math.floor(Math.random() * 360)
+      });
+      updateArcadeHUD();
+    }
+
+    function resetArcadeWave(announce = true) {
+      arcadeScore = 0;
+      arcadeCombo = 1;
+      arcadeBalls = [];
+      buildArcadeBricks();
+      spawnArcadeBall();
+      if (announce) {
+        playUISound(520, 0.1, 'triangle');
+        showToast('New Prism Breaker wave initialized!');
+      }
+    }
+
+    function updateArcadeHUD() {
+      const aliveBricks = arcadeBricks.filter((b) => b.alive).length;
+      document.getElementById('arcade-score-badge').textContent = `Score: ${arcadeScore}`;
+      document.getElementById('arcade-combo-badge').textContent = `x${arcadeCombo} Combo`;
+      document.getElementById('arcade-balls-readout').textContent = String(arcadeBalls.length);
+      document.getElementById('arcade-bricks-readout').textContent = String(aliveBricks);
+      document.getElementById('arcade-high-readout').textContent = String(arcadeHighScore);
+    }
+
+    function stepArcadeGame() {
+      if (!arcadeCtx || !arcadeCanvas) return;
+      const w = arcadeCanvas.width;
+      const h = arcadeCanvas.height;
+
+      arcadeCtx.fillStyle = bgColorMode === 'light' ? 'rgba(238, 242, 255, 0.45)' : 'rgba(3, 7, 18, 0.45)';
+      arcadeCtx.fillRect(0, 0, w, h);
+
+      // Draw Glass Bricks
+      let remaining = 0;
+      for (let i = 0; i < arcadeBricks.length; i++) {
+        const b = arcadeBricks[i];
+        if (!b.alive) continue;
+        remaining++;
+        arcadeCtx.fillStyle = `hsla(${b.hue}, 88%, 56%, 0.72)`;
+        arcadeCtx.strokeStyle = 'rgba(255,255,255,0.45)';
+        arcadeCtx.lineWidth = 1;
+        arcadeCtx.beginPath();
+        arcadeCtx.roundRect(b.x, b.y, b.w, b.h, 6);
+        arcadeCtx.fill();
+        arcadeCtx.stroke();
+      }
+
+      if (remaining === 0) {
+        buildArcadeBricks();
+        spawnArcadeBall();
+        playUISound(880, 0.16, 'triangle');
+        showToast('Wave Cleared! Bonus Multi-Ball Awarded!');
+      }
+
+      // Draw Frosted Glass Paddle
+      const py = h - 28;
+      const px = arcadePaddle.x - arcadePaddle.w / 2;
+      arcadeCtx.fillStyle = 'rgba(56, 189, 248, 0.75)';
+      arcadeCtx.strokeStyle = '#ffffff';
+      arcadeCtx.lineWidth = 1.5;
+      arcadeCtx.beginPath();
+      arcadeCtx.roundRect(px, py, arcadePaddle.w, arcadePaddle.h, 8);
+      arcadeCtx.fill();
+      arcadeCtx.stroke();
+
+      // Update & Draw Balls
+      for (let i = arcadeBalls.length - 1; i >= 0; i--) {
+        const ball = arcadeBalls[i];
+        ball.vy += arcadeGravity * 0.15;
+        ball.x += ball.vx * arcadeSpeedMult;
+        ball.y += ball.vy * arcadeSpeedMult;
+
+        if (ball.x < 8 || ball.x > w - 8) {
+          ball.vx *= -1;
+          ball.x = Math.max(8, Math.min(w - 8, ball.x));
+          playUISound(340, 0.04, 'sine');
+        }
+        if (ball.y < 8) {
+          ball.vy = Math.abs(ball.vy);
+          playUISound(400, 0.04, 'sine');
+        }
+
+        // Paddle bounce
+        if (
+          ball.vy > 0 &&
+          ball.y >= py - 7 &&
+          ball.y <= py + arcadePaddle.h + 6 &&
+          ball.x >= px - 6 &&
+          ball.x <= px + arcadePaddle.w + 6
+        ) {
+          const hitOffset = (ball.x - arcadePaddle.x) / (arcadePaddle.w / 2);
+          ball.vx = hitOffset * 6.2;
+          ball.vy = -Math.max(4.6, Math.min(7.5, Math.abs(ball.vy) * 1.03));
+          arcadeCombo = 1;
+          playUISound(480, 0.06, 'triangle');
+          updateArcadeHUD();
+        }
+
+        // Brick collisions
+        for (let j = 0; j < arcadeBricks.length; j++) {
+          const br = arcadeBricks[j];
+          if (!br.alive) continue;
+          if (ball.x >= br.x && ball.x <= br.x + br.w && ball.y >= br.y && ball.y <= br.y + br.h) {
+            br.alive = false;
+            ball.vy *= -1;
+            arcadeScore += 25 * arcadeCombo;
+            arcadeCombo = Math.min(8, arcadeCombo + 1);
+            if (arcadeScore > arcadeHighScore) arcadeHighScore = arcadeScore;
+            playUISound(520 + arcadeCombo * 45, 0.06, 'sine');
+            for (let s = 0; s < 10; s++) {
+              arcadeSparks.push({
+                x: ball.x,
+                y: ball.y,
+                vx: (Math.random() - 0.5) * 6,
+                vy: (Math.random() - 0.5) * 6,
+                alpha: 1,
+                hue: br.hue
+              });
+            }
+            updateArcadeHUD();
+            break;
+          }
+        }
+
+        // Ball lost
+        if (ball.y > h + 15) {
+          arcadeBalls.splice(i, 1);
+          if (arcadeBalls.length === 0) {
+            arcadeCombo = 1;
+            spawnArcadeBall();
+          }
+          updateArcadeHUD();
+          continue;
+        }
+
+        arcadeCtx.fillStyle = '#f8fafc';
+        arcadeCtx.beginPath();
+        arcadeCtx.arc(ball.x, ball.y, 7, 0, Math.PI * 2);
+        arcadeCtx.fill();
+      }
+
+      // Draw Sparks
+      for (let i = arcadeSparks.length - 1; i >= 0; i--) {
+        const sp = arcadeSparks[i];
+        sp.x += sp.vx;
+        sp.y += sp.vy;
+        sp.alpha -= 0.04;
+        if (sp.alpha <= 0) {
+          arcadeSparks.splice(i, 1);
+          continue;
+        }
+        arcadeCtx.fillStyle = `hsla(${sp.hue}, 95%, 65%, ${sp.alpha})`;
+        arcadeCtx.fillRect(sp.x, sp.y, 3.5, 3.5);
+      }
+    }
+
+    // =========================================================================
+    // MODULE 6: KALEIDOSCOPE & FIREWORKS STUDIO
+    // =========================================================================
+    let mandalaCanvas, mandalaCtx;
+    let mandalaRays = 12;
+    let mandalaSize = 3.5;
+    let mandalaFade = 2;
+    let mandalaDrawing = false;
+    let mandalaLast = { x: 0, y: 0 };
+    let mandalaSparks = [];
+    let mandalaAuto = false;
+
+    function initMandalaModule() {
+      mandalaCanvas = document.getElementById('mandala-canvas');
+      if (!mandalaCanvas) return;
+      mandalaCtx = mandalaCanvas.getContext('2d');
+      resizeMandalaCanvas();
+
+      mandalaCanvas.addEventListener('pointerdown', (e) => {
+        if (mandalaCanvas.setPointerCapture && e.pointerId !== undefined) {
+          try { mandalaCanvas.setPointerCapture(e.pointerId); } catch (err) {}
+        }
+        const rect = mandalaCanvas.getBoundingClientRect();
+        mandalaDrawing = true;
+        mandalaLast.x = e.clientX - rect.left;
+        mandalaLast.y = e.clientY - rect.top;
+        spawnFireworkBurst(mandalaLast.x, mandalaLast.y);
+      });
+      mandalaCanvas.addEventListener('pointermove', (e) => {
+        if (!mandalaDrawing) return;
+        const rect = mandalaCanvas.getBoundingClientRect();
+        const nx = e.clientX - rect.left;
+        const ny = e.clientY - rect.top;
+        paintMandalaStroke(mandalaLast.x, mandalaLast.y, nx, ny);
+        mandalaLast.x = nx;
+        mandalaLast.y = ny;
+      });
+      window.addEventListener('pointerup', () => {
+        mandalaDrawing = false;
+      });
+    }
+
+    function resizeMandalaCanvas() {
+      if (!mandalaCanvas) return;
+      mandalaCanvas.width = mandalaCanvas.clientWidth || 760;
+      mandalaCanvas.height = mandalaCanvas.clientHeight || 460;
+      if (mandalaCtx) {
+        mandalaCtx.fillStyle = '#030712';
+        mandalaCtx.fillRect(0, 0, mandalaCanvas.width, mandalaCanvas.height);
+      }
+    }
+
+    function paintMandalaStroke(x1, y1, x2, y2) {
+      if (!mandalaCtx || !mandalaCanvas) return;
+      const cx = mandalaCanvas.width / 2;
+      const cy = mandalaCanvas.height / 2;
+      const hue = (performance.now() * 0.08) % 360;
+
+      mandalaCtx.save();
+      mandalaCtx.translate(cx, cy);
+      mandalaCtx.strokeStyle = `hsla(${hue}, 92%, 62%, 0.85)`;
+      mandalaCtx.lineWidth = mandalaSize;
+      mandalaCtx.lineCap = 'round';
+
+      const step = (Math.PI * 2) / mandalaRays;
+      for (let i = 0; i < mandalaRays; i++) {
+        mandalaCtx.save();
+        mandalaCtx.rotate(i * step);
+        mandalaCtx.beginPath();
+        mandalaCtx.moveTo(x1 - cx, y1 - cy);
+        mandalaCtx.lineTo(x2 - cx, y2 - cy);
+        mandalaCtx.stroke();
+
+        // Mirrored reflection
+        mandalaCtx.scale(1, -1);
+        mandalaCtx.beginPath();
+        mandalaCtx.moveTo(x1 - cx, y1 - cy);
+        mandalaCtx.lineTo(x2 - cx, y2 - cy);
+        mandalaCtx.stroke();
+        mandalaCtx.restore();
+      }
+      mandalaCtx.restore();
+    }
+
+    function spawnFireworkBurst(x, y) {
+      playUISound(640, 0.09, 'triangle');
+      const baseHue = Math.random() * 360;
+      for (let i = 0; i < 42; i++) {
+        const a = (i / 42) * Math.PI * 2;
+        const sp = 1.5 + Math.random() * 4.5;
+        mandalaSparks.push({
+          x,
+          y,
+          vx: Math.cos(a) * sp,
+          vy: Math.sin(a) * sp,
+          alpha: 1,
+          hue: (baseHue + Math.random() * 50) % 360
+        });
+      }
+    }
+
+    function stepMandalaStudio(now) {
+      if (!mandalaCtx || !mandalaCanvas) return;
+      const w = mandalaCanvas.width;
+      const h = mandalaCanvas.height;
+
+      if (mandalaFade > 0) {
+        mandalaCtx.fillStyle = `rgba(3, 7, 18, ${mandalaFade * 0.008})`;
+        mandalaCtx.fillRect(0, 0, w, h);
+      }
+
+      if (mandalaAuto) {
+        const t = now * 0.003;
+        const r = Math.min(w, h) * 0.32;
+        const x1 = w / 2 + Math.cos(t * 1.7) * r * Math.sin(t * 0.6);
+        const y1 = h / 2 + Math.sin(t * 1.7) * r * Math.cos(t * 0.6);
+        const x2 = w / 2 + Math.cos((t + 0.05) * 1.7) * r * Math.sin((t + 0.05) * 0.6);
+        const y2 = h / 2 + Math.sin((t + 0.05) * 1.7) * r * Math.cos((t + 0.05) * 0.6);
+        paintMandalaStroke(x1, y1, x2, y2);
+      }
+
+      for (let i = mandalaSparks.length - 1; i >= 0; i--) {
+        const sp = mandalaSparks[i];
+        const nx = sp.x + sp.vx;
+        const ny = sp.y + sp.vy;
+        sp.vy += 0.05;
+        sp.alpha -= 0.022;
+        paintMandalaStroke(sp.x, sp.y, nx, ny);
+        sp.x = nx;
+        sp.y = ny;
+        if (sp.alpha <= 0) mandalaSparks.splice(i, 1);
+      }
+
+      const spEl = document.getElementById('mandala-sparks-readout');
+      if (spEl) spEl.textContent = String(mandalaSparks.length);
+    }
+
+    // =========================================================================
+    // MODULE 7: ASTRO-SHIELD 360° ORBITAL DEFENSE GAME
+    // =========================================================================
+    let defCanvas, defCtx;
+    let defAngle = -Math.PI / 2;
+    let defBullets = [];
+    let defMeteors = [];
+    let defParticles = [];
+    let defDrones = 1;
+    let defDroneAngle = 0;
+    let defScore = 0;
+    let defHighScore = 0;
+    let defWave = 1;
+    let defHull = 100;
+    let defEmpCount = 3;
+    let defFireRate = 7;
+    let defSpeedMult = 1.0;
+    let defSpread = 3;
+    let defLastShot = 0;
+    let defLastSpawn = 0;
+    let defKeys = { left: false, right: false, fire: false };
+
+    function initDefenderModule() {
+      defCanvas = document.getElementById('defender-canvas');
+      if (!defCanvas) return;
+      defCtx = defCanvas.getContext('2d');
+      resizeDefenderCanvas();
+      resetDefenderGame(false);
+
+      const aimAtPointer = (e) => {
+        const rect = defCanvas.getBoundingClientRect();
+        const cx = defCanvas.width / 2;
+        const cy = defCanvas.height / 2;
+        const px = e.clientX - rect.left;
+        const py = e.clientY - rect.top;
+        defAngle = Math.atan2(py - cy, px - cx);
+      };
+
+      defCanvas.addEventListener('pointermove', aimAtPointer);
+      defCanvas.addEventListener('pointerdown', (e) => {
+        aimAtPointer(e);
+        fireDefenderTurret(performance.now(), true);
+      });
+      defCanvas.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches[0]) aimAtPointer(e.touches[0]);
+      }, { passive: true });
+
+      window.addEventListener('keydown', (e) => {
+        if (activeModule !== 'defender') return;
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') defKeys.left = true;
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') defKeys.right = true;
+        if (e.key === ' ') {
+          e.preventDefault();
+          fireDefenderTurret(performance.now(), true);
+        }
+      });
+      window.addEventListener('keyup', (e) => {
+        if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') defKeys.left = false;
+        if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') defKeys.right = false;
+      });
+    }
+
+    function resizeDefenderCanvas() {
+      if (!defCanvas) return;
+      defCanvas.width = defCanvas.clientWidth || 760;
+      defCanvas.height = defCanvas.clientHeight || 460;
+    }
+
+    function resetDefenderGame(announce = true) {
+      defBullets = [];
+      defMeteors = [];
+      defParticles = [];
+      defScore = 0;
+      defWave = 1;
+      defHull = 100;
+      defEmpCount = 3;
+      updateDefenderHUD();
+      if (announce) {
+        playUISound(580, 0.1, 'triangle');
+        showToast('Astro-Shield Mission Reset — Defend the Quantum Core!');
+      }
+    }
+
+    function fireDefenderTurret(now, manualBurst = false) {
+      if (!manualBurst && now - defLastShot < 1000 / defFireRate) return;
+      defLastShot = now;
+      if (!defCanvas) return;
+      const cx = defCanvas.width / 2;
+      const cy = defCanvas.height / 2;
+      const half = Math.floor(defSpread / 2);
+      for (let i = -half; i <= half; i++) {
+        const a = defAngle + i * 0.14;
+        defBullets.push({
+          x: cx + Math.cos(a) * 32,
+          y: cy + Math.sin(a) * 32,
+          vx: Math.cos(a) * 8.5,
+          vy: Math.sin(a) * 8.5,
+          hue: 165 + i * 25
+        });
+      }
+      if (manualBurst) playUISound(720, 0.04, 'sawtooth');
+    }
+
+    function triggerDefenderEMP() {
+      if (defEmpCount <= 0) {
+        showToast('No EMP charges remaining! Start a New Mission or survive the wave.');
+        return;
+      }
+      defEmpCount--;
+      playUISound(220, 0.22, 'sawtooth');
+      defMeteors.forEach((m) => {
+        defScore += 30;
+        for (let k = 0; k < 10; k++) {
+          const a = Math.random() * Math.PI * 2;
+          const sp = 1 + Math.random() * 5;
+          defParticles.push({
+            x: m.x,
+            y: m.y,
+            vx: Math.cos(a) * sp,
+            vy: Math.sin(a) * sp,
+            alpha: 1,
+            hue: m.hue
+          });
+        }
+      });
+      defMeteors = [];
+      if (defScore > defHighScore) defHighScore = defScore;
+      updateDefenderHUD();
+      showToast('💥 EMP Supernova Vaporized All Active Threats!');
+    }
+
+    function updateDefenderHUD() {
+      const scEl = document.getElementById('def-score-badge');
+      if (scEl) scEl.textContent = `Score: ${defScore}`;
+      const wvEl = document.getElementById('def-wave-badge');
+      if (wvEl) wvEl.textContent = `Wave ${defWave}`;
+      const hlEl = document.getElementById('def-hull-readout');
+      if (hlEl) hlEl.textContent = `${Math.max(0, Math.round(defHull))}%`;
+      const drEl = document.getElementById('def-drones-readout');
+      if (drEl) drEl.textContent = `${defDrones} Active`;
+      const hiEl = document.getElementById('def-high-readout');
+      if (hiEl) hiEl.textContent = String(defHighScore);
+      const empBtn = document.getElementById('btn-def-emp');
+      if (empBtn) empBtn.textContent = `💥 EMP Nova (${defEmpCount})`;
+    }
+
+    function stepDefenderGame(now) {
+      if (!defCtx || !defCanvas) return;
+      const w = defCanvas.width;
+      const h = defCanvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+
+      defCtx.fillStyle = bgColorMode === 'light' ? 'rgba(238, 242, 255, 0.38)' : 'rgba(3, 7, 18, 0.38)';
+      defCtx.fillRect(0, 0, w, h);
+
+      if (defKeys.left) defAngle -= 0.065;
+      if (defKeys.right) defAngle += 0.065;
+
+      // Auto-fire plasma cannon
+      fireDefenderTurret(now, false);
+
+      // Spawn incoming rogue meteors
+      const spawnInterval = Math.max(380, 1150 - defWave * 65);
+      if (now - defLastSpawn > spawnInterval) {
+        defLastSpawn = now;
+        const edgeAngle = Math.random() * Math.PI * 2;
+        const spawnR = Math.hypot(cx, cy) + 25;
+        const mx = cx + Math.cos(edgeAngle) * spawnR;
+        const my = cy + Math.sin(edgeAngle) * spawnR;
+        const speed = (1.1 + Math.random() * 1.1 + defWave * 0.08) * defSpeedMult;
+        const targetAngle = Math.atan2(cy - my, cx - mx) + (Math.random() - 0.5) * 0.18;
+        defMeteors.push({
+          x: mx,
+          y: my,
+          vx: Math.cos(targetAngle) * speed,
+          vy: Math.sin(targetAngle) * speed,
+          r: 11 + Math.random() * 9,
+          hp: Math.random() < 0.25 ? 2 : 1,
+          hue: Math.random() < 0.3 ? 330 : 28 + Math.random() * 40
+        });
+      }
+
+      // Draw radar rings
+      defCtx.strokeStyle = 'rgba(56, 189, 248, 0.14)';
+      defCtx.lineWidth = 1;
+      [65, 135, 210].forEach((rad) => {
+        defCtx.beginPath();
+        defCtx.arc(cx, cy, rad, 0, Math.PI * 2);
+        defCtx.stroke();
+      });
+
+      // Draw Central Quantum Core & Turret
+      defCtx.save();
+      defCtx.translate(cx, cy);
+      defCtx.rotate(defAngle);
+      defCtx.fillStyle = '#10b981';
+      defCtx.fillRect(14, -5, 22, 10);
+      defCtx.restore();
+
+      defCtx.fillStyle = defHull > 35 ? '#38bdf8' : '#f43f5e';
+      defCtx.beginPath();
+      defCtx.arc(cx, cy, 22, 0, Math.PI * 2);
+      defCtx.fill();
+      defCtx.strokeStyle = '#a855f7';
+      defCtx.lineWidth = 3;
+      defCtx.stroke();
+
+      // Update & Draw Guard Drones
+      defDroneAngle += 0.032;
+      const droneCoords = [];
+      for (let d = 0; d < defDrones; d++) {
+        const da = defDroneAngle + (d * Math.PI * 2) / defDrones;
+        const dx = cx + Math.cos(da) * 65;
+        const dy = cy + Math.sin(da) * 65;
+        droneCoords.push({ x: dx, y: dy });
+        defCtx.fillStyle = '#a855f7';
+        defCtx.beginPath();
+        defCtx.arc(dx, dy, 6.5, 0, Math.PI * 2);
+        defCtx.fill();
+      }
+
+      // Update & Draw Bullets
+      for (let i = defBullets.length - 1; i >= 0; i--) {
+        const b = defBullets[i];
+        b.x += b.vx;
+        b.y += b.vy;
+        if (b.x < -20 || b.x > w + 20 || b.y < -20 || b.y > h + 20) {
+          defBullets.splice(i, 1);
+          continue;
+        }
+        defCtx.fillStyle = `hsl(${b.hue}, 95%, 65%)`;
+        defCtx.beginPath();
+        defCtx.arc(b.x, b.y, 3.8, 0, Math.PI * 2);
+        defCtx.fill();
+      }
+
+      // Update & Draw Meteors
+      for (let i = defMeteors.length - 1; i >= 0; i--) {
+        const m = defMeteors[i];
+        m.x += m.vx;
+        m.y += m.vy;
+
+        // Check collision with Guard Drones
+        let destroyed = false;
+        for (let d = 0; d < droneCoords.length; d++) {
+          if (Math.hypot(m.x - droneCoords[d].x, m.y - droneCoords[d].y) < m.r + 7) {
+            destroyed = true;
+            break;
+          }
+        }
+
+        // Check collision with Bullets
+        if (!destroyed) {
+          for (let j = defBullets.length - 1; j >= 0; j--) {
+            const b = defBullets[j];
+            if (Math.hypot(m.x - b.x, m.y - b.y) < m.r + 5) {
+              defBullets.splice(j, 1);
+              m.hp--;
+              if (m.hp <= 0) destroyed = true;
+              break;
+            }
+          }
+        }
+
+        if (destroyed) {
+          defScore += 25;
+          if (defScore > defHighScore) defHighScore = defScore;
+          if (defScore % 250 === 0) defWave++;
+          playUISound(480 + (defScore % 300), 0.05, 'triangle');
+          for (let k = 0; k < 8; k++) {
+            const a = Math.random() * Math.PI * 2;
+            const sp = 1 + Math.random() * 4;
+            defParticles.push({
+              x: m.x,
+              y: m.y,
+              vx: Math.cos(a) * sp,
+              vy: Math.sin(a) * sp,
+              alpha: 1,
+              hue: m.hue
+            });
+          }
+          defMeteors.splice(i, 1);
+          updateDefenderHUD();
+          continue;
+        }
+
+        // Check impact on Central Core
+        if (Math.hypot(m.x - cx, m.y - cy) < m.r + 22) {
+          defHull -= 14;
+          playUISound(190, 0.12, 'sawtooth');
+          defMeteors.splice(i, 1);
+          if (defHull <= 0) {
+            defHull = 100;
+            defWave = Math.max(1, defWave - 1);
+            showToast('⚠️ Core Shield Breached! Emergency Quantum Reboot Engaged!');
+          }
+          updateDefenderHUD();
+          continue;
+        }
+
+        defCtx.fillStyle = `hsla(${m.hue}, 90%, 58%, 0.88)`;
+        defCtx.strokeStyle = '#ffffff';
+        defCtx.lineWidth = 1.5;
+        defCtx.beginPath();
+        defCtx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+        defCtx.fill();
+        defCtx.stroke();
+      }
+
+      // Draw Explosion Sparks
+      for (let i = defParticles.length - 1; i >= 0; i--) {
+        const pt = defParticles[i];
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        pt.alpha -= 0.04;
+        if (pt.alpha <= 0) {
+          defParticles.splice(i, 1);
+          continue;
+        }
+        defCtx.fillStyle = `hsla(${pt.hue}, 95%, 65%, ${pt.alpha})`;
+        defCtx.fillRect(pt.x, pt.y, 3.5, 3.5);
+      }
+    }
+
+    // =========================================================================
+    // MODULE 8: CYBER-PULSE NEON AIR HOCKEY DUEL
+    // =========================================================================
+    let pongCanvas, pongCtx;
+    let pongPlayer = { x: 380, y: 390, r: 28 };
+    let pongAI = { x: 380, y: 65, r: 28 };
+    let pongPucks = [];
+    let pongBumpers = [];
+    let pongUseBumpers = true;
+    let pongPlayerScore = 0;
+    let pongAIScore = 0;
+    let pongRally = 0;
+    let pongSpeedMult = 1.0;
+    let pongAILevel = 3;
+
+    function initCyberPongModule() {
+      pongCanvas = document.getElementById('cyberpong-canvas');
+      if (!pongCanvas) return;
+      pongCtx = pongCanvas.getContext('2d');
+      resizeCyberPongCanvas();
+      resetCyberPongMatch(false);
+
+      const moveStriker = (clientX, clientY) => {
+        const rect = pongCanvas.getBoundingClientRect();
+        const nx = clientX - rect.left;
+        const ny = clientY - rect.top;
+        pongPlayer.x = Math.max(pongPlayer.r + 8, Math.min(pongCanvas.width - pongPlayer.r - 8, nx));
+        pongPlayer.y = Math.max(pongCanvas.height * 0.52, Math.min(pongCanvas.height - pongPlayer.r - 8, ny));
+      };
+
+      pongCanvas.addEventListener('pointermove', (e) => moveStriker(e.clientX, e.clientY));
+      pongCanvas.addEventListener('pointerdown', (e) => moveStriker(e.clientX, e.clientY));
+      pongCanvas.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches[0]) moveStriker(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: true });
+
+      window.addEventListener('keydown', (e) => {
+        if (activeModule !== 'cyberpong') return;
+        if (e.key === 'ArrowLeft') pongPlayer.x = Math.max(pongPlayer.r + 10, pongPlayer.x - 30);
+        if (e.key === 'ArrowRight') pongPlayer.x = Math.min(pongCanvas.width - pongPlayer.r - 10, pongPlayer.x + 30);
+      });
+    }
+
+    function resizeCyberPongCanvas() {
+      if (!pongCanvas) return;
+      pongCanvas.width = pongCanvas.clientWidth || 760;
+      pongCanvas.height = pongCanvas.clientHeight || 460;
+      pongPlayer.x = pongCanvas.width / 2;
+      pongPlayer.y = pongCanvas.height - 56;
+      pongAI.x = pongCanvas.width / 2;
+      pongAI.y = 56;
+      buildPongBumpers();
+    }
+
+    function buildPongBumpers() {
+      if (!pongCanvas) return;
+      const w = pongCanvas.width;
+      const h = pongCanvas.height;
+      pongBumpers = [
+        { x: w * 0.26, y: h * 0.5, r: 18, hue: 190 },
+        { x: w * 0.5, y: h * 0.5, r: 22, hue: 280 },
+        { x: w * 0.74, y: h * 0.5, r: 18, hue: 42 }
+      ];
+    }
+
+    function spawnCyberPuck() {
+      if (!pongCanvas) return;
+      const a = (Math.random() < 0.5 ? 1 : -1) * (Math.PI * 0.35 + Math.random() * 0.3);
+      pongPucks.push({
+        x: pongCanvas.width / 2,
+        y: pongCanvas.height / 2,
+        vx: Math.cos(a) * 5.6,
+        vy: Math.sin(a) * 5.6,
+        r: 11,
+        hue: 45
+      });
+      updateCyberPongHUD();
+    }
+
+    function resetCyberPongMatch(announce = true) {
+      pongPlayerScore = 0;
+      pongAIScore = 0;
+      pongRally = 0;
+      pongPucks = [];
+      buildPongBumpers();
+      spawnCyberPuck();
+      if (announce) {
+        playUISound(560, 0.09, 'triangle');
+        showToast('Cyber-Pulse Air Hockey Match Reset!');
+      }
+    }
+
+    function updateCyberPongHUD() {
+      const scEl = document.getElementById('pong-score-badge');
+      if (scEl) scEl.textContent = `YOU ${pongPlayerScore} : ${pongAIScore} AI`;
+      const rlEl = document.getElementById('pong-rally-badge');
+      if (rlEl) rlEl.textContent = `Rally: ${pongRally}`;
+      const plEl = document.getElementById('pong-player-readout');
+      if (plEl) plEl.textContent = String(pongPlayerScore);
+      const aiEl = document.getElementById('pong-ai-readout');
+      if (aiEl) aiEl.textContent = String(pongAIScore);
+      const bmEl = document.getElementById('pong-bumpers-readout');
+      if (bmEl) bmEl.textContent = pongUseBumpers ? 'Active (3)' : 'Disabled';
+    }
+
+    function stepCyberPongGame() {
+      if (!pongCtx || !pongCanvas) return;
+      const w = pongCanvas.width;
+      const h = pongCanvas.height;
+
+      pongCtx.fillStyle = bgColorMode === 'light' ? 'rgba(238, 242, 255, 0.42)' : 'rgba(3, 7, 18, 0.42)';
+      pongCtx.fillRect(0, 0, w, h);
+
+      // Draw Center Line & Goal Zones
+      const goalW = Math.min(220, w * 0.38);
+      const goalLeft = (w - goalW) / 2;
+      pongCtx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+      pongCtx.lineWidth = 2;
+      pongCtx.beginPath();
+      pongCtx.moveTo(0, h / 2);
+      pongCtx.lineTo(w, h / 2);
+      pongCtx.stroke();
+
+      pongCtx.strokeStyle = '#f43f5e';
+      pongCtx.lineWidth = 4;
+      pongCtx.beginPath();
+      pongCtx.moveTo(goalLeft, 3);
+      pongCtx.lineTo(goalLeft + goalW, 3);
+      pongCtx.stroke();
+
+      pongCtx.strokeStyle = '#38bdf8';
+      pongCtx.beginPath();
+      pongCtx.moveTo(goalLeft, h - 3);
+      pongCtx.lineTo(goalLeft + goalW, h - 3);
+      pongCtx.stroke();
+
+      // Draw Pinball Bumpers
+      if (pongUseBumpers) {
+        for (let i = 0; i < pongBumpers.length; i++) {
+          const b = pongBumpers[i];
+          pongCtx.fillStyle = `hsla(${b.hue}, 90%, 55%, 0.45)`;
+          pongCtx.strokeStyle = `hsl(${b.hue}, 95%, 68%)`;
+          pongCtx.lineWidth = 2;
+          pongCtx.beginPath();
+          pongCtx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+          pongCtx.fill();
+          pongCtx.stroke();
+        }
+      }
+
+      // Adaptive AI Movement
+      if (pongPucks.length > 0) {
+        const targetPuck = pongPucks[0];
+        const aiSpeed = 2.4 + pongAILevel * 1.15;
+        if (pongAI.x < targetPuck.x - 6) pongAI.x += aiSpeed;
+        else if (pongAI.x > targetPuck.x + 6) pongAI.x -= aiSpeed;
+        pongAI.x = Math.max(pongAI.r + 10, Math.min(w - pongAI.r - 10, pongAI.x));
+      }
+
+      // Draw Player & AI Strikers
+      const drawMallet = (m, color) => {
+        pongCtx.fillStyle = color;
+        pongCtx.strokeStyle = '#ffffff';
+        pongCtx.lineWidth = 2;
+        pongCtx.beginPath();
+        pongCtx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+        pongCtx.fill();
+        pongCtx.stroke();
+      };
+      drawMallet(pongPlayer, '#38bdf8');
+      drawMallet(pongAI, '#f43f5e');
+
+      // Update Pucks
+      for (let i = pongPucks.length - 1; i >= 0; i--) {
+        const pk = pongPucks[i];
+        pk.x += pk.vx * pongSpeedMult;
+        pk.y += pk.vy * pongSpeedMult;
+
+        // Side wall bounce
+        if (pk.x < pk.r || pk.x > w - pk.r) {
+          pk.vx *= -1;
+          pk.x = Math.max(pk.r, Math.min(w - pk.r, pk.x));
+          playUISound(360, 0.04, 'sine');
+        }
+
+        // Top / Bottom Goal or Wall Check
+        if (pk.y < pk.r) {
+          if (pk.x >= goalLeft && pk.x <= goalLeft + goalW) {
+            pongPlayerScore++;
+            pongRally = 0;
+            playUISound(780, 0.14, 'triangle');
+            pongPucks.splice(i, 1);
+            if (pongPucks.length === 0) spawnCyberPuck();
+            updateCyberPongHUD();
+            continue;
+          } else {
+            pk.vy = Math.abs(pk.vy);
+            pk.y = pk.r;
+          }
+        } else if (pk.y > h - pk.r) {
+          if (pk.x >= goalLeft && pk.x <= goalLeft + goalW) {
+            pongAIScore++;
+            pongRally = 0;
+            playUISound(240, 0.14, 'sawtooth');
+            pongPucks.splice(i, 1);
+            if (pongPucks.length === 0) spawnCyberPuck();
+            updateCyberPongHUD();
+            continue;
+          } else {
+            pk.vy = -Math.abs(pk.vy);
+            pk.y = h - pk.r;
+          }
+        }
+
+        // Circle-Circle Collision Helper
+        const bounceCircle = (cx, cy, cr, boost = 1.05) => {
+          const dx = pk.x - cx;
+          const dy = pk.y - cy;
+          const dist = Math.hypot(dx, dy);
+          if (dist < pk.r + cr && dist > 0.1) {
+            const nx = dx / dist;
+            const ny = dy / dist;
+            const speed = Math.min(9.5, Math.max(5.5, Math.hypot(pk.vx, pk.vy) * boost));
+            pk.vx = nx * speed;
+            pk.vy = ny * speed;
+            pk.x = cx + nx * (pk.r + cr + 2);
+            pk.y = cy + ny * (pk.r + cr + 2);
+            pongRally++;
+            playUISound(520 + Math.min(300, pongRally * 15), 0.05, 'triangle');
+            updateCyberPongHUD();
+          }
+        };
+
+        bounceCircle(pongPlayer.x, pongPlayer.y, pongPlayer.r, 1.06);
+        bounceCircle(pongAI.x, pongAI.y, pongAI.r, 1.04);
+
+        if (pongUseBumpers) {
+          for (let b = 0; b < pongBumpers.length; b++) {
+            bounceCircle(pongBumpers[b].x, pongBumpers[b].y, pongBumpers[b].r, 1.02);
+          }
+        }
+
+        pongCtx.fillStyle = '#fde047';
+        pongCtx.beginPath();
+        pongCtx.arc(pk.x, pk.y, pk.r, 0, Math.PI * 2);
+        pongCtx.fill();
+      }
+    }
+
+    // =========================================================================
+    // MASTER ANIMATION LOOP & UI WIRING
+    // =========================================================================
+    let frameCount = 0;
+    let lastFpsCheck = performance.now();
+
+    function masterLoop(now) {
+      frameCount++;
+      if (now - lastFpsCheck >= 1000) {
+        const fpsEl = document.getElementById('fps-counter');
+        if (fpsEl) fpsEl.textContent = `${Math.min(60, frameCount)} FPS`;
+        frameCount = 0;
+        lastFpsCheck = now;
+      }
+
+      stepTouchBackground(now);
+
+      if (activeModule === 'cosmos') {
+        stepCosmosPhysics();
+      } else if (activeModule === 'flow') {
+        stepFlowField();
+      } else if (activeModule === 'synth') {
+        drawSynthOscilloscope();
+      } else if (activeModule === 'life') {
+        if (lifeRunning && now - lastLifeStep >= 1000 / lifeSpeed) {
+          stepLifeGeneration();
+          lastLifeStep = now;
+        }
+      } else if (activeModule === 'arcade') {
+        stepArcadeGame();
+      } else if (activeModule === 'defender') {
+        stepDefenderGame(now);
+      } else if (activeModule === 'cyberpong') {
+        stepCyberPongGame();
+      } else if (activeModule === 'mandala') {
+        stepMandalaStudio(now);
+      }
+
+      requestAnimationFrame(masterLoop);
+    }
+
+    function switchModule(modName) {
+      activeModule = modName;
+      playUISound(540, 0.07, 'sine');
+
+      const map = {
+        cosmos: { tab: 'tab-cosmos', panel: 'panel-cosmos' },
+        flow: { tab: 'tab-flow', panel: 'panel-flow' },
+        synth: { tab: 'tab-synth', panel: 'panel-synth' },
+        life: { tab: 'tab-life', panel: 'panel-life' },
+        arcade: { tab: 'tab-arcade', panel: 'panel-arcade' },
+        defender: { tab: 'tab-defender', panel: 'panel-defender' },
+        cyberpong: { tab: 'tab-cyberpong', panel: 'panel-cyberpong' },
+        mandala: { tab: 'tab-mandala', panel: 'panel-mandala' }
+      };
+
+      Object.keys(map).forEach((k) => {
+        const t = document.getElementById(map[k].tab);
+        const p = document.getElementById(map[k].panel);
+        if (k === modName) {
+          t.classList.add('tab-active');
+          t.classList.remove('text-slate-300');
+          p.classList.remove('hidden');
+          p.classList.add('grid');
+        } else {
+          t.classList.remove('tab-active');
+          t.classList.add('text-slate-300');
+          p.classList.add('hidden');
+          p.classList.remove('grid');
+        }
+      });
+
+      if (modName === 'flow') {
+        setTimeout(() => {
+          resizeFlowCanvas();
+          rebuildFlowParticles();
+        }, 20);
+      } else if (modName === 'life') {
+        setTimeout(drawLifeGrid, 20);
+      } else if (modName === 'cosmos' && renderer) {
+        setTimeout(handleResize, 20);
+      } else if (modName === 'arcade') {
+        setTimeout(resizeArcadeCanvas, 20);
+      } else if (modName === 'defender') {
+        setTimeout(resizeDefenderCanvas, 20);
+      } else if (modName === 'cyberpong') {
+        setTimeout(resizeCyberPongCanvas, 20);
+      } else if (modName === 'mandala') {
+        setTimeout(resizeMandalaCanvas, 20);
+      }
+    }
+
+    function handleResize() {
+      if (renderer && camera) {
+        const container = document.getElementById('cosmos-viewport');
+        if (container && container.clientWidth > 0) {
+          camera.aspect = container.clientWidth / container.clientHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+      }
+      resizeTouchBackground();
+      if (activeModule === 'flow') resizeFlowCanvas();
+      if (activeModule === 'life') drawLifeGrid();
+      if (activeModule === 'arcade') resizeArcadeCanvas();
+      if (activeModule === 'defender') resizeDefenderCanvas();
+      if (activeModule === 'cyberpong') resizeCyberPongCanvas();
+      if (activeModule === 'mandala') resizeMandalaCanvas();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initTouchBackground();
+      initCosmos3D();
+      initFlowField();
+      initSynthModule();
+      initLifeModule();
+      initArcadeModule();
+      initDefenderModule();
+      initCyberPongModule();
+      initMandalaModule();
+
+      // Tab Navigation
+      document.getElementById('tab-cosmos').addEventListener('click', () => switchModule('cosmos'));
+      document.getElementById('tab-flow').addEventListener('click', () => switchModule('flow'));
+      document.getElementById('tab-synth').addEventListener('click', () => switchModule('synth'));
+      document.getElementById('tab-life').addEventListener('click', () => switchModule('life'));
+      document.getElementById('tab-arcade').addEventListener('click', () => switchModule('arcade'));
+      document.getElementById('tab-defender').addEventListener('click', () => switchModule('defender'));
+      document.getElementById('tab-cyberpong').addEventListener('click', () => switchModule('cyberpong'));
+      document.getElementById('tab-mandala').addEventListener('click', () => switchModule('mandala'));
+
+      // Microphone Sound-Reactive Background Toggle Button (also bound to S key)
+      document.getElementById('btn-mic-mode').addEventListener('click', () => {
+        cycleMicSoundMode();
+      });
+
+      // Dark / Light iOS Glass Mode Switcher
+      document.getElementById('btn-color-mode').addEventListener('click', () => {
+        bgColorMode = bgColorMode === 'dark' ? 'light' : 'dark';
+        if (bgColorMode === 'light') {
+          document.documentElement.setAttribute('data-color-mode', 'light');
+          document.getElementById('color-mode-icon').textContent = '☀️';
+          document.getElementById('color-mode-label').textContent = 'Light Glass';
+        } else {
+          document.documentElement.removeAttribute('data-color-mode');
+          document.getElementById('color-mode-icon').textContent = '🌙';
+          document.getElementById('color-mode-label').textContent = 'Dark Glass';
+        }
+        playUISound(620, 0.08, 'triangle');
+        showToast(bgColorMode === 'light' ? 'Switched to Light iOS Frosted Glass Mode' : 'Switched to Dark Obsidian Glass Mode');
+      });
+
+      // Touch-Only vs Ambient Blurred Background Toggle
+      document.getElementById('btn-bg-mode').addEventListener('click', () => {
+        bgTouchOnly = !bgTouchOnly;
+        document.getElementById('bg-mode-label').textContent = bgTouchOnly ? 'Touch Aura Only' : 'Full Blurred Aura';
+        playUISound(540, 0.08, 'sine');
+        showToast(bgTouchOnly ? 'Background animations now appear only where you touch/move!' : 'Full-screen blurred liquid grass & aurora active!');
+      });
+
+      // Global Controls
+      document.getElementById('btn-theme-cycle').addEventListener('click', () => {
+        currentThemeIdx = (currentThemeIdx + 1) % themes.length;
+        const t = themes[currentThemeIdx];
+        if (t.id === 'cyber') document.documentElement.removeAttribute('data-theme');
+        else document.documentElement.setAttribute('data-theme', t.id);
+        document.getElementById('theme-label').textContent = t.label;
+        playUISound(640, 0.09, 'triangle');
+        showToast(`Theme switched to ${t.label}`);
+      });
+
+      document.getElementById('btn-sfx-toggle').addEventListener('click', () => {
+        sfxEnabled = !sfxEnabled;
+        document.getElementById('sfx-icon').textContent = sfxEnabled ? '🔊' : '🔇';
+        document.getElementById('sfx-label').textContent = sfxEnabled ? 'SFX On' : 'Muted';
+        if (sfxEnabled) playUISound(580, 0.08, 'sine');
+      });
+
+      // Guide Modal
+      const guideModal = document.getElementById('modal-guide');
+      document.getElementById('btn-guide-open').addEventListener('click', () => {
+        guideModal.classList.remove('hidden');
+        playUISound(500, 0.08, 'sine');
+      });
+      document.getElementById('btn-guide-close').addEventListener('click', () => guideModal.classList.add('hidden'));
+      document.getElementById('btn-guide-gotit').addEventListener('click', () => guideModal.classList.add('hidden'));
+
+      // Module 1 Controls
+      document.getElementById('btn-cam-orbit').addEventListener('click', () => { camMode = 'orbit'; playUISound(480, 0.06); });
+      document.getElementById('btn-cam-top').addEventListener('click', () => { camMode = 'top'; playUISound(520, 0.06); });
+      document.getElementById('btn-cam-close').addEventListener('click', () => { camMode = 'close'; playUISound(560, 0.06); });
+
+      document.getElementById('slider-time-scale').addEventListener('input', (e) => {
+        timeScale = parseFloat(e.target.value);
+        document.getElementById('val-time-scale').textContent = `${timeScale.toFixed(1)}x`;
+      });
+      document.getElementById('slider-star-mass').addEventListener('input', (e) => {
+        starMass = parseFloat(e.target.value);
+        document.getElementById('val-star-mass').textContent = `${starMass.toFixed(2)} M☉`;
+        document.getElementById('telemetry-star-mass').textContent = `${starMass.toFixed(2)} M☉`;
+      });
+      document.getElementById('slider-cam-zoom').addEventListener('input', (e) => {
+        camRadius = parseFloat(e.target.value);
+        document.getElementById('val-cam-zoom').textContent = `${camRadius} AU`;
+      });
+      document.getElementById('slider-planet-size').addEventListener('input', (e) => {
+        launchRadius = parseFloat(e.target.value);
+        document.getElementById('val-planet-size').textContent = `${launchRadius.toFixed(1)} R⊕`;
+      });
+      document.getElementById('slider-launch-vel').addEventListener('input', (e) => {
+        launchVelMultiplier = parseFloat(e.target.value);
+        document.getElementById('val-launch-vel').textContent = `${launchVelMultiplier.toFixed(2)} v₀`;
+      });
+
+      document.getElementById('btn-spawn-planet').addEventListener('click', () => {
+        const dist = 20 + Math.random() * 55;
+        const a = Math.random() * Math.PI * 2;
+        spawnPlanetAt(Math.cos(a) * dist, Math.sin(a) * dist, launchRadius, launchVelMultiplier, false);
+        playUISound(620, 0.1, 'triangle');
+      });
+      document.getElementById('btn-spawn-comet').addEventListener('click', () => {
+        const dist = 70 + Math.random() * 25;
+        const a = Math.random() * Math.PI * 2;
+        spawnPlanetAt(Math.cos(a) * dist, Math.sin(a) * dist, 1.1, 1.35, true);
+        playUISound(820, 0.12, 'sawtooth');
+      });
+      document.getElementById('btn-binary-star').addEventListener('click', () => {
+        binaryMode = !binaryMode;
+        playUISound(420, 0.14, 'triangle');
+        showToast(binaryMode ? 'Binary Star System Activated!' : 'Single Star System Restored');
+      });
+      document.getElementById('btn-supernova-wave').addEventListener('click', () => {
+        planets.forEach((p) => {
+          p.vx *= 1.22;
+          p.vz *= 1.22;
+        });
+        playUISound(240, 0.18, 'sawtooth');
+        showToast('Gravitational Wave boosted orbital velocities!');
+      });
+      document.getElementById('btn-reset-cosmos').addEventListener('click', () => resetSolarSystem(true));
+
+      // Module 2 Controls
+      const setForceMode = (mode, label) => {
+        flowForceMode = mode;
+        document.getElementById('flow-mode-readout').textContent = label;
+        playUISound(540, 0.06);
+      };
+      document.getElementById('btn-force-swirl').addEventListener('click', () => setForceMode('swirl', 'Swirl Vortex'));
+      document.getElementById('btn-force-attract').addEventListener('click', () => setForceMode('attract', 'Gravity Well'));
+      document.getElementById('btn-force-repel').addEventListener('click', () => setForceMode('repel', 'Force Shield'));
+      document.getElementById('btn-force-orbit').addEventListener('click', () => setForceMode('orbit', 'Ring Orbit'));
+
+      document.getElementById('btn-flow-shockwave').addEventListener('click', triggerFlowShockwave);
+      document.getElementById('btn-flow-clear').addEventListener('click', () => {
+        if (flowCtx && flowCanvas) {
+          flowCtx.fillStyle = '#030712';
+          flowCtx.fillRect(0, 0, flowCanvas.width, flowCanvas.height);
+        }
+      });
+
+      document.getElementById('slider-flow-count').addEventListener('input', (e) => {
+        flowCount = parseInt(e.target.value, 10);
+        document.getElementById('val-flow-count').textContent = String(flowCount);
+        rebuildFlowParticles();
+      });
+      document.getElementById('slider-flow-speed').addEventListener('input', (e) => {
+        flowSpeed = parseFloat(e.target.value);
+        document.getElementById('val-flow-speed').textContent = flowSpeed.toFixed(1);
+      });
+      document.getElementById('slider-flow-turbulence').addEventListener('input', (e) => {
+        flowTurbulence = parseInt(e.target.value, 10);
+        document.getElementById('val-flow-turbulence').textContent = `Level ${flowTurbulence}`;
+        document.getElementById('flow-turb-readout').textContent = `${(flowTurbulence * 0.001).toFixed(3)} rad`;
+      });
+      document.getElementById('slider-flow-trail').addEventListener('input', (e) => {
+        const pct = parseInt(e.target.value, 10);
+        flowTrail = pct / 100;
+        document.getElementById('val-flow-trail').textContent = `${pct}%`;
+      });
+
+      document.getElementById('btn-pal-cyber').addEventListener('click', () => { flowPalette = 'cyber'; rebuildFlowParticles(); });
+      document.getElementById('btn-pal-aurora').addEventListener('click', () => { flowPalette = 'aurora'; rebuildFlowParticles(); });
+      document.getElementById('btn-pal-solar').addEventListener('click', () => { flowPalette = 'solar'; rebuildFlowParticles(); });
+
+      // Module 3 Controls
+      document.getElementById('btn-seq-play').addEventListener('click', () => startStopSequencer(false));
+      document.getElementById('btn-seq-random').addEventListener('click', () => {
+        seqGrid = Array.from({ length: 6 }, () =>
+          Array.from({ length: 16 }, () => Math.random() < 0.24)
+        );
+        renderSequencerGrid();
+        playUISound(660, 0.09, 'triangle');
+        showToast('Generated new Cosmic Arpeggio pattern');
+      });
+      document.getElementById('btn-seq-clear').addEventListener('click', () => {
+        seqGrid = Array.from({ length: 6 }, () => Array(16).fill(false));
+        renderSequencerGrid();
+      });
+
+      const setWaveform = (w) => {
+        synthWave = w;
+        playUISound(500, 0.06, w);
+      };
+      document.getElementById('wave-sawtooth').addEventListener('click', () => setWaveform('sawtooth'));
+      document.getElementById('wave-triangle').addEventListener('click', () => setWaveform('triangle'));
+      document.getElementById('wave-square').addEventListener('click', () => setWaveform('square'));
+      document.getElementById('wave-sine').addEventListener('click', () => setWaveform('sine'));
+
+      document.getElementById('slider-synth-bpm').addEventListener('input', (e) => {
+        synthBpm = parseInt(e.target.value, 10);
+        document.getElementById('val-synth-bpm').textContent = `${synthBpm} BPM`;
+        if (seqPlaying) {
+          startStopSequencer(true);
+          startStopSequencer(false);
+        }
+      });
+      document.getElementById('slider-synth-cutoff').addEventListener('input', (e) => {
+        synthCutoff = parseInt(e.target.value, 10);
+        document.getElementById('val-synth-cutoff').textContent = `${synthCutoff.toLocaleString()} Hz`;
+      });
+      document.getElementById('slider-synth-release').addEventListener('input', (e) => {
+        synthRelease = parseFloat(e.target.value);
+        document.getElementById('val-synth-release').textContent = `${synthRelease.toFixed(2)} s`;
+      });
+      document.getElementById('slider-synth-delay').addEventListener('input', (e) => {
+        const pct = parseInt(e.target.value, 10);
+        document.getElementById('val-synth-delay').textContent = `${pct}%`;
+        if (feedbackGain) feedbackGain.gain.value = pct / 100;
+      });
+
+      // Module 4 Controls
+      document.getElementById('btn-life-toggle').addEventListener('click', (e) => {
+        lifeRunning = !lifeRunning;
+        e.currentTarget.textContent = lifeRunning ? '⏸ Pause Evolution' : '▶ Resume Evolution';
+      });
+      document.getElementById('btn-life-step').addEventListener('click', () => {
+        stepLifeGeneration();
+        playUISound(580, 0.05);
+      });
+      document.getElementById('select-life-rule').addEventListener('change', (e) => {
+        lifeRule = e.target.value;
+        const labels = {
+          conway: 'B3/S23 (Conway)',
+          highlife: 'B36/S23 (HighLife)',
+          daynight: 'B3678/S34678 (Day&Night)'
+        };
+        document.getElementById('life-rule-readout').textContent = labels[lifeRule] || lifeRule;
+      });
+      document.getElementById('btn-life-pulsar').addEventListener('click', stampPulsar);
+      document.getElementById('btn-life-glidergun').addEventListener('click', stampGliderStream);
+      document.getElementById('btn-life-random').addEventListener('click', () => seedLifeRandom(0.24));
+      document.getElementById('btn-life-clear').addEventListener('click', () => {
+        lifeGrid = createEmptyLifeGrid();
+        lifeGeneration = 0;
+        updateLifeTelemetry();
+        drawLifeGrid();
+      });
+      document.getElementById('slider-life-speed').addEventListener('input', (e) => {
+        lifeSpeed = parseInt(e.target.value, 10);
+        document.getElementById('val-life-speed').textContent = `${lifeSpeed} Gen/s`;
+      });
+
+
+      // Module 5 (Arcade) Controls
+      document.getElementById('btn-arcade-multiball').addEventListener('click', () => {
+        spawnArcadeBall();
+        spawnArcadeBall();
+        playUISound(740, 0.1, 'triangle');
+        showToast('Spawned +2 Multi-Balls!');
+      });
+      document.getElementById('btn-arcade-restart').addEventListener('click', () => resetArcadeWave(true));
+      document.getElementById('slider-arcade-speed').addEventListener('input', (e) => {
+        arcadeSpeedMult = parseFloat(e.target.value);
+        document.getElementById('val-arcade-speed').textContent = `${arcadeSpeedMult.toFixed(1)}x`;
+      });
+      document.getElementById('slider-arcade-paddle').addEventListener('input', (e) => {
+        arcadePaddle.w = parseInt(e.target.value, 10);
+        document.getElementById('val-arcade-paddle').textContent = `${arcadePaddle.w} px`;
+      });
+      document.getElementById('slider-arcade-gravity').addEventListener('input', (e) => {
+        arcadeGravity = parseFloat(e.target.value);
+        document.getElementById('val-arcade-gravity').textContent = `${arcadeGravity.toFixed(2)} g`;
+      });
+      document.getElementById('btn-arcade-laser').addEventListener('click', () => {
+        let hit = 0;
+        for (let i = 0; i < arcadeBricks.length && hit < 6; i++) {
+          if (arcadeBricks[i].alive) {
+            arcadeBricks[i].alive = false;
+            arcadeScore += 50;
+            hit++;
+          }
+        }
+        playUISound(860, 0.14, 'sawtooth');
+        updateArcadeHUD();
+        showToast('Laser Beam shattered 6 prisms!');
+      });
+      document.getElementById('btn-arcade-slowmo').addEventListener('click', () => {
+        arcadeSpeedMult = arcadeSpeedMult < 0.8 ? 1.0 : 0.6;
+        document.getElementById('slider-arcade-speed').value = String(arcadeSpeedMult);
+        document.getElementById('val-arcade-speed').textContent = `${arcadeSpeedMult.toFixed(1)}x`;
+        showToast(arcadeSpeedMult < 0.8 ? 'Bullet-Time Slow Motion Activated!' : 'Normal Arcade Speed Restored');
+      });
+
+      // Module 6 (Kaleidoscope & Fireworks) Controls
+      document.getElementById('btn-mandala-burst').addEventListener('click', () => {
+        if (!mandalaCanvas) return;
+        for (let i = 0; i < 3; i++) {
+          spawnFireworkBurst(
+            mandalaCanvas.width * (0.25 + Math.random() * 0.5),
+            mandalaCanvas.height * (0.25 + Math.random() * 0.5)
+          );
+        }
+      });
+      document.getElementById('btn-mandala-clear').addEventListener('click', resizeMandalaCanvas);
+      document.getElementById('slider-mandala-rays').addEventListener('input', (e) => {
+        mandalaRays = parseInt(e.target.value, 10);
+        document.getElementById('val-mandala-rays').textContent = `${mandalaRays} Rays`;
+        document.getElementById('mandala-sym-badge').textContent = `${mandalaRays}-Fold Symmetry`;
+        document.getElementById('mandala-rays-readout').textContent = `${mandalaRays} Axes`;
+      });
+      document.getElementById('slider-mandala-size').addEventListener('input', (e) => {
+        mandalaSize = parseFloat(e.target.value);
+        document.getElementById('val-mandala-size').textContent = `${mandalaSize.toFixed(1)} px`;
+      });
+      document.getElementById('slider-mandala-fade').addEventListener('input', (e) => {
+        mandalaFade = parseInt(e.target.value, 10);
+        document.getElementById('val-mandala-fade').textContent = mandalaFade === 0 ? 'Permanent' : `Level ${mandalaFade}`;
+      });
+      document.getElementById('btn-mandala-auto').addEventListener('click', () => {
+        mandalaAuto = !mandalaAuto;
+        showToast(mandalaAuto ? 'Auto-Spirograph Painter Activated!' : 'Auto-Spirograph Paused');
+      });
+      document.getElementById('btn-mandala-ring').addEventListener('click', () => {
+        if (!mandalaCanvas) return;
+        spawnFireworkBurst(mandalaCanvas.width / 2, mandalaCanvas.height / 2);
+      });
+
+      // Module 7 (Astro-Shield Defender) Controls
+      document.getElementById('btn-def-emp').addEventListener('click', triggerDefenderEMP);
+      document.getElementById('btn-def-restart').addEventListener('click', () => resetDefenderGame(true));
+      document.getElementById('slider-def-firerate').addEventListener('input', (e) => {
+        defFireRate = parseInt(e.target.value, 10);
+        document.getElementById('val-def-firerate').textContent = `Rapid (${defFireRate}/s)`;
+      });
+      document.getElementById('slider-def-speed').addEventListener('input', (e) => {
+        defSpeedMult = parseFloat(e.target.value);
+        document.getElementById('val-def-speed').textContent = `${defSpeedMult.toFixed(1)}x`;
+      });
+      document.getElementById('slider-def-spread').addEventListener('input', (e) => {
+        defSpread = parseInt(e.target.value, 10);
+        const names = { 1: 'Single Laser', 3: 'Triple Shot', 5: 'Penta Spread' };
+        document.getElementById('val-def-spread').textContent = names[defSpread] || `${defSpread}-Barrel`;
+      });
+      document.getElementById('btn-def-drone').addEventListener('click', () => {
+        defDrones = Math.min(5, defDrones + 1);
+        playUISound(680, 0.08, 'triangle');
+        updateDefenderHUD();
+        showToast(`🛰️ Guard Drone Deployed (${defDrones}/5 Active)`);
+      });
+      document.getElementById('btn-def-repair').addEventListener('click', () => {
+        defHull = Math.min(100, defHull + 35);
+        playUISound(540, 0.09, 'sine');
+        updateDefenderHUD();
+        showToast('🛡️ Core Quantum Shield Repaired +35%!');
+      });
+
+      // Module 8 (Cyber-Pulse Air Hockey) Controls
+      document.getElementById('btn-pong-multiball').addEventListener('click', () => {
+        spawnCyberPuck();
+        playUISound(760, 0.09, 'triangle');
+        showToast('⚡ Extra Chaos Puck Injected!');
+      });
+      document.getElementById('btn-pong-restart').addEventListener('click', () => resetCyberPongMatch(true));
+      document.getElementById('slider-pong-speed').addEventListener('input', (e) => {
+        pongSpeedMult = parseFloat(e.target.value);
+        document.getElementById('val-pong-speed').textContent = `${pongSpeedMult.toFixed(1)}x`;
+      });
+      document.getElementById('slider-pong-ai').addEventListener('input', (e) => {
+        pongAILevel = parseInt(e.target.value, 10);
+        const labels = { 1: 'Rookie', 2: 'Casual', 3: 'Balanced', 4: 'Veteran', 5: 'Grandmaster' };
+        document.getElementById('val-pong-ai').textContent = labels[pongAILevel] || `Level ${pongAILevel}`;
+      });
+      document.getElementById('slider-pong-pad').addEventListener('input', (e) => {
+        pongPlayer.r = parseInt(e.target.value, 10);
+        document.getElementById('val-pong-pad').textContent = `${pongPlayer.r} px`;
+      });
+      document.getElementById('btn-pong-bumpers').addEventListener('click', () => {
+        pongUseBumpers = !pongUseBumpers;
+        playUISound(500, 0.07, 'sine');
+        updateCyberPongHUD();
+        showToast(pongUseBumpers ? '🔮 Pinball Gravity Bumpers Enabled!' : '🔮 Arena Bumpers Disabled');
+      });
+      document.getElementById('btn-pong-boost').addEventListener('click', () => {
+        pongPucks.forEach((p) => {
+          p.vx *= 1.35;
+          p.vy *= 1.35;
+        });
+        playUISound(820, 0.11, 'sawtooth');
+        showToast('🚀 Hyper-Smash Boosted Puck Velocity!');
+      });
+
+      window.addEventListener('resize', handleResize);
+      window.addEventListener('orientationchange', () => setTimeout(handleResize, 120));
+      requestAnimationFrame(masterLoop);
+    });
+  </script>
+</body>
+</html>
