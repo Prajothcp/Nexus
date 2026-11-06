@@ -12,41 +12,64 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22'
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21 (Required by Capacitor 7/8)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: 17
+          java-version: '21'
 
       - name: Initialize Capacitor Android Project
         run: |
           mkdir -p www
-          cp index.html www/index.html
+          if [ -f "index.html" ]; then
+            cp index.html www/index.html
+          else
+            FIRST_HTML=$(find . -maxdepth 1 -name "*.html" | head -n 1)
+            cp "$FIRST_HTML" www/index.html
+          fi
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/android
           npx cap init "Aether Nexus" com.aethernexus.app --web-dir=www
           npx cap add android
 
-      - name: Inject Microphone Permission & Screen Rotation Support
+      - name: Inject Microphone Permission & Desktop Viewport Support
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           sed -i 's|<application|<uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n    <application|' "$MANIFEST"
-          npx cap sync android
 
-      - name: Build Debug APK with Gradle
-        working-directory: ./android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug
+          MAIN_ACT=$(find android/app/src/main/java -name "MainActivity.java" | head -n 1)
+          cat << 'EOF' > "$MAIN_ACT"
+          package com.aethernexus.app;
 
-      - name: Upload Ready-to-Install APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Aether-Nexus-Android-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          
+          import android.Manifest;
+          import android.content.pm.PackageManager;
+          import android.os.Build;
+          import android.os.Bundle;
+          import android.webkit.PermissionRequest;
+          import android.webkit.WebSettings;
+          import com.getcapacitor.BridgeActivity;
+          import com.getcapacitor.BridgeWebChromeClient;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                      if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                          requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 101);
+                      }
+                  }
+                  if (getBridge() != null && getBridge().getWebView() != null) {
+                      WebSettings ws = getBridge().getWebView().getSettings();
+                      ws.setUseWideViewPort(true);
+                      ws.setLoadWithOverviewMode(true);
+                      ws.setSupportZoom(true);
+                      ws.setBuiltInZoomControls(true);
+                      ws.setDisplayZoomControls(false);
+                      ws.setMediaPlaybackRequiresUserGesture(false);
+                      getBridge().getWebView().setWebChromeClient(new BridgeWebChromeClient(getBridge()) {
